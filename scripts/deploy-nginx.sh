@@ -107,6 +107,46 @@ deploy_common_configs() {
     fi
 }
 
+# Fonction de déploiement des frontends (CORRIGÉE)
+deploy_frontends() {
+    log_info "Déploiement des frontends depuis l'infrastructure..."
+    
+    # Créer le répertoire web principal
+    mkdir -p /var/www
+    
+    # Vérifier que le dossier frontend existe dans l'infrastructure
+    if [ ! -d "$INFRASTRUCTURE_DIR/frontend" ]; then
+        log_warning "Aucun dossier frontend trouvé dans $INFRASTRUCTURE_DIR/frontend"
+        return 0
+    fi
+    
+    # Parcourir tous les frontends dans l'infrastructure
+    for frontend_dir in "$INFRASTRUCTURE_DIR/frontend"/*; do
+        if [ -d "$frontend_dir" ]; then
+            # Extraire le nom du frontend
+            frontend_name=$(basename "$frontend_dir")
+            
+            log_info "Déploiement frontend: $frontend_name"
+            
+            # Créer le dossier de destination dans /var/www/
+            mkdir -p "/var/www/$frontend_name"
+            
+            # Copier le frontend
+            cp -r "$frontend_dir"/* "/var/www/$frontend_name/"
+            
+            # Permissions correctes
+            chown -R www-data:www-data "/var/www/$frontend_name"
+            chmod -R 755 "/var/www/$frontend_name"
+            
+            log_success "Frontend $frontend_name déployé dans /var/www/$frontend_name"
+        fi
+    done
+    
+    log_success "Déploiement des frontends terminé"
+    log_info "Frontends disponibles dans /var/www/:"
+    ls -la /var/www/ | grep "^d"
+}
+
 # Fonction de déploiement des sites
 deploy_sites() {
     log_info "Déploiement des configurations de sites..."
@@ -205,6 +245,7 @@ main() {
     
     # Déploiement
     deploy_common_configs
+    deploy_frontends
     deploy_sites
     cleanup_old_sites
     
@@ -220,6 +261,7 @@ main() {
         echo "- N8N Workflows  : https://n8n.larefonte.store (N8N port 5678)"
         echo "- Cercle Voyages : https://cercledesvoyages.larefonte.store (SPA + API port 3001)"
         echo ""
+        echo "?? Frontends déployés dans /var/www/"
         echo "?? Logs disponibles dans /var/log/nginx/"
         echo "?? Sauvegarde dans : $BACKUP_DIR"
         
@@ -244,16 +286,23 @@ case "${1:-}" in
     "test")
         test_nginx_config
         ;;
+    "frontend")
+        log_info "Déploiement rapide des frontends uniquement..."
+        deploy_frontends
+        reload_nginx
+        log_success "Frontends déployés !"
+        ;;
     "")
         main
         ;;
     *)
-        echo "Usage: $0 [rollback /path/to/backup|test]"
+        echo "Usage: $0 [rollback /path/to/backup|test|frontend]"
         echo ""
         echo "Options:"
         echo "  (aucun)    : Déploiement complet"
         echo "  test       : Test de configuration uniquement"
         echo "  rollback   : Restaurer une sauvegarde"
+        echo "  frontend   : Déploiement rapide des frontends uniquement"
         exit 1
         ;;
 esac
