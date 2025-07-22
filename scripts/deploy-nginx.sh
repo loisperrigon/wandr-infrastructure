@@ -107,7 +107,7 @@ deploy_common_configs() {
     fi
 }
 
-# Fonction de déploiement des frontends (CORRIGÉE)
+# Fonction de déploiement des frontends (CORRIGÉE POUR FORCER LA MISE À JOUR)
 deploy_frontends() {
     log_info "Déploiement des frontends depuis l'infrastructure..."
     
@@ -128,17 +128,33 @@ deploy_frontends() {
             
             log_info "Déploiement frontend: $frontend_name"
             
+            # SUPPRIMER COMPLÈTEMENT le dossier existant pour forcer la mise à jour
+            if [ -d "/var/www/$frontend_name" ]; then
+                log_warning "Suppression de l'ancien frontend /var/www/$frontend_name"
+                rm -rf "/var/www/$frontend_name"
+            fi
+            
             # Créer le dossier de destination dans /var/www/
             mkdir -p "/var/www/$frontend_name"
             
-            # Copier le frontend
-            cp -r "$frontend_dir"/* "/var/www/$frontend_name/"
+            # Copier le frontend avec rsync pour une synchronisation complète
+            if command -v rsync &> /dev/null; then
+                log_info "Utilisation de rsync pour la synchronisation..."
+                rsync -av --delete "$frontend_dir/" "/var/www/$frontend_name/"
+            else
+                log_info "Utilisation de cp pour la copie..."
+                cp -r "$frontend_dir"/* "/var/www/$frontend_name/"
+            fi
             
             # Permissions correctes
             chown -R www-data:www-data "/var/www/$frontend_name"
             chmod -R 755 "/var/www/$frontend_name"
             
             log_success "Frontend $frontend_name déployé dans /var/www/$frontend_name"
+            
+            # Afficher la taille du frontend déployé
+            frontend_size=$(du -sh "/var/www/$frontend_name" | cut -f1)
+            log_info "Taille du frontend $frontend_name: $frontend_size"
         fi
     done
     
@@ -230,6 +246,53 @@ rollback() {
     fi
 }
 
+# Fonction de déploiement d'un frontend spécifique
+deploy_specific_frontend() {
+    local frontend_name="$1"
+    
+    if [ -z "$frontend_name" ]; then
+        log_error "Nom du frontend non spécifié"
+        return 1
+    fi
+    
+    local frontend_dir="$INFRASTRUCTURE_DIR/frontend/$frontend_name"
+    
+    if [ ! -d "$frontend_dir" ]; then
+        log_error "Frontend $frontend_name non trouvé dans $frontend_dir"
+        return 1
+    fi
+    
+    log_info "Déploiement spécifique du frontend: $frontend_name"
+    
+    # Supprimer l'ancien frontend
+    if [ -d "/var/www/$frontend_name" ]; then
+        log_warning "Suppression de l'ancien frontend /var/www/$frontend_name"
+        rm -rf "/var/www/$frontend_name"
+    fi
+    
+    # Créer le dossier de destination
+    mkdir -p "/var/www/$frontend_name"
+    
+    # Copier avec rsync ou cp
+    if command -v rsync &> /dev/null; then
+        log_info "Utilisation de rsync pour la synchronisation..."
+        rsync -av --delete "$frontend_dir/" "/var/www/$frontend_name/"
+    else
+        log_info "Utilisation de cp pour la copie..."
+        cp -r "$frontend_dir"/* "/var/www/$frontend_name/"
+    fi
+    
+    # Permissions correctes
+    chown -R www-data:www-data "/var/www/$frontend_name"
+    chmod -R 755 "/var/www/$frontend_name"
+    
+    log_success "Frontend $frontend_name déployé avec succès"
+    
+    # Afficher la taille
+    frontend_size=$(du -sh "/var/www/$frontend_name" | cut -f1)
+    log_info "Taille du frontend $frontend_name: $frontend_size"
+}
+
 # Fonction principale
 main() {
     echo "=========================================="
@@ -287,22 +350,35 @@ case "${1:-}" in
         test_nginx_config
         ;;
     "frontend")
-        log_info "Déploiement rapide des frontends uniquement..."
-        deploy_frontends
-        reload_nginx
-        log_success "Frontends déployés !"
+        if [ -n "${2:-}" ]; then
+            # Déploiement d'un frontend spécifique
+            deploy_specific_frontend "$2"
+            reload_nginx
+            log_success "Frontend $2 déployé !"
+        else
+            # Déploiement de tous les frontends
+            log_info "Déploiement rapide de tous les frontends..."
+            deploy_frontends
+            reload_nginx
+            log_success "Tous les frontends déployés !"
+        fi
         ;;
     "")
         main
         ;;
     *)
-        echo "Usage: $0 [rollback /path/to/backup|test|frontend]"
+        echo "Usage: $0 [rollback /path/to/backup|test|frontend [nom_frontend]]"
         echo ""
         echo "Options:"
-        echo "  (aucun)    : Déploiement complet"
-        echo "  test       : Test de configuration uniquement"
-        echo "  rollback   : Restaurer une sauvegarde"
-        echo "  frontend   : Déploiement rapide des frontends uniquement"
+        echo "  (aucun)              : Déploiement complet"
+        echo "  test                 : Test de configuration uniquement"
+        echo "  rollback <backup>    : Restaurer une sauvegarde"
+        echo "  frontend             : Déploiement rapide de tous les frontends"
+        echo "  frontend <nom>       : Déploiement d'un frontend spécifique"
+        echo ""
+        echo "Exemples:"
+        echo "  $0 frontend                              # Déploie tous les frontends"
+        echo "  $0 frontend Dashboard-Cercle-des-Voyages # Déploie seulement ce frontend"
         exit 1
         ;;
 esac

@@ -1,0 +1,27 @@
+{
+  "name": "dashboard-cercle-des-voyages-frontend",
+  "version": "1.0.0",
+  "description": "Interface utilisateur pour la gestion des briefs WordPress - Dashboard Cercle des Voyages",
+  "main": "index.html",
+  "scripts": {
+    "start": "npx http-server . -p 8081 -a localhost --silent",
+    "dev": "npx http-server . -p 8080 -o -c-1",
+    "build": "echo 'Aucune étape de build nécessaire pour le HTML statique'"
+  },
+  "devDependencies": {
+    "http-server": "^14.1.1"
+  },
+  "keywords": [
+    "html",
+    "css",
+    "javascript",
+    "frontend",
+    "briefs",
+    "cercle-voyages"
+  ],
+  "author": "Cercle des Voyages",
+  "license": "MIT",
+  "engines": {
+    "node": ">=16.0.0"
+  }
+}

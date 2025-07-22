@@ -1,0 +1,162 @@
+<!DOCTYPE html>
+<html lang="fr">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Agent IA - Brief Creator</title>
+    <link rel="stylesheet" href="assets/css/styles.css" />
+  </head>
+  <body>
+    <!-- Header -->
+    <header class="header">
+      <div class="logo">🌍 CERCLE DES VOYAGES</div>
+      <div class="header-actions">
+        <div id="connection-status-header" class="connection-status">
+          Connecté à WordPress
+        </div>
+        <!-- Indicateur de chargement en arrière-plan -->
+        <div
+          id="background-loading-indicator"
+          class="background-loading"
+          style="display: none"
+        >
+          <div class="loading-dots">
+            <span></span>
+            <span></span>
+            <span></span>
+          </div>
+          <span class="loading-text">Chargement complet...</span>
+        </div>
+
+        <!-- Indicateur de génération des briefs -->
+        <div
+          id="brief-generation-indicator"
+          class="brief-generation-indicator"
+          style="display: none"
+        >
+          <div class="generation-spinner"></div>
+          <span class="generation-text">🔄 Création de briefs...</span>
+          <span class="generation-count">(0 en cours)</span>
+        </div>
+      </div>
+    </header>
+
+    <!-- Main Container -->
+    <div class="container">
+      <!-- Connection Form -->
+      <div class="connection-form" id="connection-form">
+        <h2 style="margin-bottom: 16px; font-size: 18px">
+          Connexion WordPress
+        </h2>
+        <div class="form-row">
+          <div class="form-group">
+            <label for="username">Nom d'utilisateur</label>
+            <input
+              type="text"
+              id="username"
+              value="remi.segura"
+              placeholder="admin"
+            />
+          </div>
+          <div class="form-group">
+            <label for="password">Mot de passe d'application</label>
+            <input
+              type="password"
+              id="password"
+              placeholder="xxxx xxxx xxxx xxxx"
+            />
+          </div>
+          <button class="connect-btn" onclick="connectToWordPress()">
+            <span id="connect-text">Se connecter</span>
+          </button>
+        </div>
+      </div>
+
+      <!-- Main Dashboard -->
+      <div id="main-dashboard" style="display: none">
+        <h1 class="page-title">Toutes les pages</h1>
+        <p class="page-subtitle">
+          Gérez et générez des briefs pour l'ensemble de vos pages
+        </p>
+
+        <!-- Filters -->
+        <div class="filters-section">
+          <div class="filters-row">
+            <select class="filter-select" id="template-filter">
+              <option value="">Tous les templates</option>
+            </select>
+
+            <select class="filter-select" id="brief-filter">
+              <option value="">Tous les briefs</option>
+              <option value="generated">✅ Créés</option>
+            </select>
+
+            <div class="search-box">
+              <input
+                type="text"
+                class="search-input"
+                id="search-input"
+                placeholder="Rechercher une page..."
+              />
+              <span>🔍</span>
+            </div>
+
+            <!-- Bouton de synchronisation RAG -->
+            <button
+              class="sync-btn"
+              id="sync-rag-btn"
+              title="Synchroniser les données des pages pour optimiser la recherche. À faire tous les mois."
+              onclick="app.syncRAGData()"
+            >
+              🔄 Synchroniser
+            </button>
+          </div>
+        </div>
+
+        <!-- Table -->
+        <div class="table-container" id="table-container">
+          <div class="loading-state" id="loading-state">
+            <div class="spinner"></div>
+            <p>Chargement des pages WordPress...</p>
+          </div>
+
+          <table class="table" id="pages-table" style="display: none">
+            <thead>
+              <tr>
+                <th style="width: 350px">Page</th>
+                <th style="width: 100px">Template</th>
+                <th style="width: 120px">Brief</th>
+                <th style="width: 120px">Action</th>
+                <th style="width: 100px">Mise à jour</th>
+              </tr>
+            </thead>
+            <tbody id="pages-tbody">
+              <!-- Les pages seront ajoutées dynamiquement -->
+            </tbody>
+          </table>
+
+          <!-- Pagination -->
+          <div class="pagination" id="pagination">
+            <div class="pagination-info" id="pagination-info">
+              Affichage 1-10 sur 0 pages
+            </div>
+            <div class="pagination-controls">
+              <button class="pagination-btn" id="prev-btn" disabled>
+                ◀ Précédent
+              </button>
+              <button class="pagination-btn active">1</button>
+              <button class="pagination-btn" id="next-btn">Suivant ▶</button>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Scripts -->
+    <script src="assets/js/config.js"></script>
+    <script src="assets/js/utils/helpers.js"></script>
+    <script src="assets/js/services/api.js"></script>
+    <script src="assets/js/components/ui.js"></script>
+    <script src="assets/js/app.js"></script>
+  </body>
+</html>
