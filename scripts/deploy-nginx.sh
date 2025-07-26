@@ -156,16 +156,14 @@ deploy_frontends() {
             if [ -d "$frontend_base" ]; then
                 log_info "D�ploiement des frontends du projet: $project_name (depuis $(basename "$frontend_base"))"
                 
-                for frontend_dir in "$frontend_base"/*; do
-                if [ -d "$frontend_dir" ]; then
-                    # Extraire le nom du frontend
-                    frontend_name=$(basename "$frontend_dir")
-                    
-                    # Mapping spécifique pour les projets connus
-                    if [[ "$project_name" == "cercle-des-voyages" && "$frontend_name" == "assets" ]]; then
-                        frontend_name="Dashboard-Cercle-des-Voyages"
-                        log_info "Mapping spécial: assets -> Dashboard-Cercle-des-Voyages"
-                    fi
+                # Traiter le frontend directement, pas ses sous-dossiers
+                frontend_dir="$frontend_base"
+                frontend_name="$project_name"
+                
+                # Mapping spécifique pour les noms de projets
+                if [[ "$project_name" == "cercle-des-voyages" ]]; then
+                    frontend_name="Dashboard-Cercle-des-Voyages"
+                fi
                     
                     log_info "D�ploiement frontend: $frontend_name"
                     
@@ -214,8 +212,6 @@ deploy_frontends() {
                     # Afficher la taille du frontend d�ploy�
                     frontend_size=$(du -sh "/var/www/$frontend_name" | cut -f1)
                     log_info "Taille du frontend $frontend_name: $frontend_size"
-                fi
-            done
         fi
         done
     done
