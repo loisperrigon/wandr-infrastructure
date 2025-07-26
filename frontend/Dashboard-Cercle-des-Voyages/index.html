@@ -14,6 +14,13 @@
         <div id="connection-status-header" class="connection-status">
           Connecté à WordPress
         </div>
+        <button class="sync-btn" id="sync-btn" onclick="app.syncData()" title="Synchroniser les données" style="display: none;">
+          🔄 <span id="sync-text">Synchroniser</span>
+          <small id="sync-time" style="display: block; font-size: 11px; opacity: 0.8;"></small>
+        </button>
+        <button id="logout-btn" class="logout-btn" onclick="app.logout()" style="display: none;">
+          🚪 Déconnexion
+        </button>
         <!-- Indicateur de chargement en arrière-plan -->
         <div
           id="background-loading-indicator"
@@ -28,46 +35,104 @@
           <span class="loading-text">Chargement complet...</span>
         </div>
 
-        <!-- Indicateur de génération des briefs -->
-        <div
-          id="brief-generation-indicator"
-          class="brief-generation-indicator"
-          style="display: none"
-        >
-          <div class="generation-spinner"></div>
-          <span class="generation-text">🔄 Création de briefs...</span>
-          <span class="generation-count">(0 en cours)</span>
-        </div>
       </div>
     </header>
 
     <!-- Main Container -->
     <div class="container">
-      <!-- Connection Form -->
-      <div class="connection-form" id="connection-form">
-        <h2 style="margin-bottom: 16px; font-size: 18px">
-          Connexion WordPress
-        </h2>
-        <div class="form-row">
+      <!-- Auth Container -->
+      <div class="auth-container" id="auth-container">
+        <!-- Toggle Buttons -->
+        <div class="auth-toggle">
+          <button class="toggle-btn active" id="login-tab" onclick="showLoginForm()">
+            Connexion
+          </button>
+          <button class="toggle-btn" id="register-tab" onclick="showRegisterForm()" style="display: none;">
+            Créer un site
+          </button>
+        </div>
+
+        <!-- Login Form -->
+        <div class="auth-form" id="login-form">
+          <h2 class="auth-title">Connexion à votre site</h2>
+          <p class="auth-subtitle">Connectez-vous avec vos identifiants WordPress</p>
+          
           <div class="form-group">
-            <label for="username">Nom d'utilisateur</label>
+            <label for="login-username">Nom d'utilisateur</label>
             <input
               type="text"
-              id="username"
-              value="remi.segura"
+              id="login-username"
+              placeholder="Nom d'utilisateur WordPress"
+            />
+          </div>
+          
+          <div class="form-group">
+            <label for="login-password">Clé API WordPress</label>
+            <input
+              type="password"
+              id="login-password"
+              placeholder="xxxx xxxx xxxx xxxx xxxx xxxx"
+            />
+            <small class="form-hint">
+              Utilisez votre clé d'application WordPress (ou votre mot de passe si configuré)
+            </small>
+          </div>
+          
+          <button class="auth-btn primary" id="login-btn" onclick="handleLogin()">
+            <span id="login-text">Se connecter</span>
+          </button>
+        </div>
+
+        <!-- Register Form -->
+        <div class="auth-form" id="register-form" style="display: none;">
+          <h2 class="auth-title">Ajouter un nouveau site</h2>
+          <p class="auth-subtitle">Connectez votre site au dashboard</p>
+          
+          <div class="form-group">
+            <label>Type d'application</label>
+            <div class="toggle-group">
+              <input type="radio" id="app-wordpress" name="app-type" value="wordpress" checked onchange="updateFormLabels()">
+              <label for="app-wordpress" class="toggle-label">WordPress</label>
+              <input type="radio" id="app-webflow" name="app-type" value="webflow" onchange="updateFormLabels()">
+              <label for="app-webflow" class="toggle-label">Webflow</label>
+            </div>
+          </div>
+          
+          <div class="form-group">
+            <label for="register-username" id="username-label">Nom d'utilisateur WordPress</label>
+            <input
+              type="text"
+              id="register-username"
               placeholder="admin"
             />
           </div>
+          
           <div class="form-group">
-            <label for="password">Mot de passe d'application</label>
+            <label for="register-password" id="password-label">Clé API WordPress</label>
             <input
               type="password"
-              id="password"
-              placeholder="xxxx xxxx xxxx xxxx"
+              id="register-password"
+              placeholder="xxxx xxxx xxxx xxxx xxxx xxxx"
             />
+            <small class="form-hint" id="password-hint">
+              Votre clé d'application WordPress (créée dans Utilisateurs → Mots de passe d'application)
+            </small>
           </div>
-          <button class="connect-btn" onclick="connectToWordPress()">
-            <span id="connect-text">Se connecter</span>
+          
+          <div class="form-group">
+            <label for="register-url" id="url-label">URL du site WordPress</label>
+            <input
+              type="url"
+              id="register-url"
+              placeholder="https://monsite.com"
+            />
+            <small class="form-hint" id="url-hint">
+              L'adresse complète de votre site WordPress
+            </small>
+          </div>
+          
+          <button class="auth-btn primary" id="register-btn" onclick="handleRegister()">
+            <span id="register-text">Ajouter le site</span>
           </button>
         </div>
       </div>
@@ -101,15 +166,6 @@
               <span>🔍</span>
             </div>
 
-            <!-- Bouton de synchronisation RAG -->
-            <button
-              class="sync-btn"
-              id="sync-rag-btn"
-              title="Synchroniser les données des pages pour optimiser la recherche. À faire tous les mois."
-              onclick="app.syncRAGData()"
-            >
-              🔄 Synchroniser
-            </button>
           </div>
         </div>
 
@@ -127,7 +183,9 @@
                 <th style="width: 100px">Template</th>
                 <th style="width: 120px">Brief</th>
                 <th style="width: 120px">Action</th>
-                <th style="width: 100px">Mise à jour</th>
+                <th style="width: 100px; cursor: pointer;" onclick="app.toggleDateSort()" id="date-header">
+                  Mise à jour <span id="sort-indicator">↕️</span>
+                </th>
               </tr>
             </thead>
             <tbody id="pages-tbody">
@@ -155,7 +213,16 @@
     <!-- Scripts -->
     <script src="assets/js/config.js"></script>
     <script src="assets/js/utils/helpers.js"></script>
+    <script src="assets/js/utils/buttonStateManager.js"></script>
+    <script src="assets/js/utils/timerManager.js"></script>
+    <script src="assets/js/utils/eventManager.js"></script>
+    <script src="assets/js/services/httpClient.js"></script>
+    <script src="assets/js/services/errorHandler.js"></script>
+    <script src="assets/js/services/authService.js"></script>
+    <script src="assets/js/services/cacheService.js"></script>
+    <script src="assets/js/services/briefQueueService.js"></script>
     <script src="assets/js/services/api.js"></script>
+    <script src="assets/js/services/dataService.js"></script>
     <script src="assets/js/components/ui.js"></script>
     <script src="assets/js/app.js"></script>
   </body>

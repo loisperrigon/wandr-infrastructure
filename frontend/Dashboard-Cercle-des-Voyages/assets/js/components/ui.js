@@ -59,12 +59,23 @@ class LoadingManager {
    * Afficher l'état de chargement
    */
   show(message = "Chargement des pages WordPress...") {
-    this.loadingState.style.display = "block";
-    this.loadingState.innerHTML = `
-      <div class="spinner"></div>
-      <p>${message}</p>
-    `;
-    this.pagesTable.style.display = "none";
+    // S'assurer que le conteneur parent est visible
+    const tableContainer = document.getElementById('table-container');
+    if (tableContainer) {
+      tableContainer.classList.add('visible');
+    }
+    
+    if (this.loadingState) {
+      this.loadingState.style.display = "block";
+      this.loadingState.innerHTML = `
+        <div class="spinner"></div>
+        <p>${message}</p>
+      `;
+    }
+    
+    if (this.pagesTable) {
+      this.pagesTable.style.display = "none";
+    }
   }
 
   /**
@@ -118,16 +129,16 @@ class TableManager {
    * Créer une ligne de tableau pour une page
    */
   createPageRow(page, briefsData) {
-    const briefStatus = this.getBriefStatus(page.id, briefsData);
-    const isGenerating = briefGenerationManager.isGenerating(page.id);
+    const briefStatus = this.getBriefStatus(page.page_id, briefsData);
+    const isGenerating = briefGenerationManager.isGenerating(page.page_id);
 
     return `
-      <tr data-wordpress-id="${page.id}">
+      <tr data-wordpress-id="${page.page_id}" data-page-url="${page.link || ''}">
         <td>
           <div class="page-info">
             <div class="page-details">
               <div class="page-title-cell">${page.title.rendered}</div>
-              <div class="page-url">${this.formatUrl(
+              <div class="page-url" data-full-url="${page.link || ''}">${this.formatUrl(
                 page.link
               )} <small style="color: #999;">(${
       page.wordpress_type
@@ -144,7 +155,9 @@ class TableManager {
           <div class="brief-status">
             <div class="brief-indicator ${briefStatus}"></div>
             <span class="brief-text">${
-              briefStatus === "generated" ? "Créé" : "À générer"
+              briefStatus === "generated" ? "Créé" : 
+              briefStatus === "pending" ? "En attente" : 
+              "À générer"
             }</span>
           </div>
         </td>
@@ -165,28 +178,72 @@ class TableManager {
     if (briefStatus === "generated") {
       return `
         <div style="display: flex; gap: 4px; flex-direction: column;">
-          <button class="generate-btn generated" disabled>✓ Brief créé</button>
-          <div style="display: flex; gap: 4px;">
-            <button class="read-brief-btn" onclick="app.readBrief(${page.id}, '${page.title.rendered}')">📖 Lire</button>
-            <button class="download-brief-btn" onclick="app.downloadBrief(${page.id}, '${page.title.rendered}')">💾 Télécharger</button>
+          <div style="display: flex; gap: 4px; flex-wrap: wrap;">
+            <button class="read-brief-btn" onclick="app.readBrief(${page.page_id}, '${page.title.rendered.replace(/'/g, "\\'").replace(/"/g, '\\"')}')">📖 Lire</button>
+            <button class="download-brief-btn" onclick="app.downloadBrief(${page.page_id}, '${page.title.rendered.replace(/'/g, "\\'").replace(/"/g, '\\"')}')">💾 Télécharger</button>
+          </div>
+          <div style="display: flex; gap: 4px; flex-wrap: wrap;">
+            <button class="apply-recommendations-btn" onclick="app.applyRecommendations(${page.page_id}, '${page.title.rendered.replace(/'/g, "\\'").replace(/"/g, '\\"')}')">📝 Appliquer</button>
+            <button class="new-brief-btn" onclick="app.createNewBrief(${page.page_id}, '${page.title.rendered.replace(/'/g, "\\'").replace(/"/g, '\\"')}')">🔄 Nouveau</button>
+          </div>
+          <div style="display: flex; gap: 4px; flex-wrap: wrap;">
+            <button class="delete-brief-btn" onclick="app.deleteBrief(${page.page_id}, '${page.title.rendered.replace(/'/g, "\\'").replace(/"/g, '\\"')}')">🗑️ Supprimer</button>
           </div>
         </div>
       `;
-    } else if (isGenerating) {
-      return briefGenerationManager.getProgressBarHTML();
     } else {
-      return `
-        <button class="generate-btn" onclick="app.generateBrief(this, '${
-          page.template
-        }', '${page.title.rendered}', ${page.id})">
-          ${
-            briefStatus === "processing"
-              ? "⏳ Génération..."
-              : "Générer le brief"
-          }
-        </button>
-      `;
+      // Vérifier l'état dans la queue
+      const queueState = briefQueue.getBriefState(page.page_id);
+      
+      if (queueState === 'generating') {
+        return this.createGeneratingButton(page.page_id);
+      } else if (queueState === 'queued') {
+        return this.createQueuedButton(page.page_id);
+      } else if (isGenerating) {
+        return briefGenerationManager.getProgressBarHTML();
+      } else {
+        return this.createGenerateButton(page);
+      }
     }
+  }
+
+  /**
+   * Créer le bouton de génération standard
+   */
+  createGenerateButton(page) {
+    return `
+      <button class="generate-btn" onclick="this.classList.add('btn-clicked'); briefQueue.addToQueue({
+        pageId: ${page.page_id}, 
+        pageTitle: '${page.title.rendered.replace(/'/g, "\\'")}', 
+        templateType: '${page.template}', 
+        button: this
+      })">
+        Générer le brief
+      </button>
+    `;
+  }
+
+  /**
+   * Créer le bouton pour brief en cours de génération
+   */
+  createGeneratingButton(pageId) {
+    return `
+      <div class="animate-in" style="animation: slideInFromRight 0.3s ease-out;">
+        ${briefGenerationManager.getProgressBarHTML()}
+      </div>
+    `;
+  }
+
+  /**
+   * Créer le bouton pour brief en queue
+   */
+  createQueuedButton(pageId) {
+    return `
+      <div class="queue-status queued animate-in" style="animation: slideInFromRight 0.3s ease-out;">
+        <div class="queue-pulse"></div>
+        <span>⏳ En attente</span>
+      </div>
+    `;
   }
 
   /**
@@ -194,7 +251,13 @@ class TableManager {
    */
   getBriefStatus(pageId, briefsData) {
     const brief = briefsData[pageId];
-    return brief ? brief.status : "not_generated";
+    if (!brief) {
+      return "not_generated";
+    }
+    
+    // On fait confiance au statut stocké dans la base de données
+    // car brief_html_base64 n'est pas toujours disponible (notamment depuis le cache)
+    return brief.status || "not_generated";
   }
 
   /**
@@ -215,6 +278,12 @@ class TableManager {
     this.paginationInfo.textContent = `Affichage ${startItem}-${endItem} sur ${totalItems} pages`;
     this.prevBtn.disabled = currentPage === 1;
     this.nextBtn.disabled = currentPage === totalPages;
+    
+    // Mettre à jour le numéro de page affiché
+    const pageNumberBtn = document.querySelector('.pagination-controls .pagination-btn.active');
+    if (pageNumberBtn) {
+      pageNumberBtn.textContent = currentPage;
+    }
   }
 }
 
@@ -249,6 +318,19 @@ class FilterManager {
   }
 
   /**
+   * Mettre à jour les options du filtre de type de post
+   */
+  updatePostTypeFilter(postTypes) {
+    // Pour l'instant, on utilise le même filtre que les templates
+    // car les types de posts sont mappés vers les templates
+    const pages = Object.keys(postTypes).map(type => ({
+      template: mapPostTypeToTemplate(type)
+    }));
+    
+    this.updateTemplateFilter(pages);
+  }
+
+  /**
    * Obtenir les valeurs actuelles des filtres
    */
   getFilters() {
@@ -275,9 +357,6 @@ class FilterManager {
 class BriefGenerationManager {
   constructor() {
     this.generatingBriefs = new Map(); // wordpressId -> { startTime, timer, progress }
-    this.indicator = document.getElementById("brief-generation-indicator");
-    this.countElement = this.indicator?.querySelector(".generation-count");
-    this.textElement = this.indicator?.querySelector(".generation-text");
   }
 
   /**
@@ -301,8 +380,6 @@ class BriefGenerationManager {
 
     this.generatingBriefs.get(wordpressId).timer = timer;
 
-    // Afficher l'indicateur général
-    this.showIndicator();
 
     console.log(`🔄 Début de génération pour: ${pageTitle}`);
   }
@@ -395,53 +472,9 @@ class BriefGenerationManager {
     // Supprimer du Map
     this.generatingBriefs.delete(wordpressId);
 
-    // Mettre à jour l'indicateur général
-    this.updateIndicator();
-
     console.log(`✅ Génération terminée pour: ${brief.pageTitle}`);
   }
 
-  /**
-   * Afficher l'indicateur général
-   */
-  showIndicator() {
-    if (this.indicator) {
-      this.indicator.style.display = "flex";
-      this.updateIndicator();
-    }
-  }
-
-  /**
-   * Masquer l'indicateur général
-   */
-  hideIndicator() {
-    if (this.indicator) {
-      this.indicator.style.display = "none";
-    }
-  }
-
-  /**
-   * Mettre à jour l'indicateur général
-   */
-  updateIndicator() {
-    const count = this.generatingBriefs.size;
-
-    if (this.countElement) {
-      this.countElement.textContent = `(${count} en cours)`;
-    }
-
-    if (this.textElement) {
-      this.textElement.textContent =
-        count === 1
-          ? "🔄 Création d'un brief..."
-          : `🔄 Création de ${count} briefs...`;
-    }
-
-    // Masquer si aucun brief en cours
-    if (count === 0) {
-      this.hideIndicator();
-    }
-  }
 
   /**
    * Obtenir le HTML pour la barre de progression
@@ -470,17 +503,23 @@ class BriefGenerationManager {
  */
 class NotificationManager {
   /**
-   * Afficher une notification de succès (silencieuse)
+   * Afficher une notification de succès (visuelle + console)
    */
   showSuccess(message, details = "") {
     console.log(`✅ ${message}`, details ? `\n${details}` : "");
+    
+    // Affichage visuel
+    this._showVisualNotification(message, 'success');
   }
 
   /**
-   * Afficher une notification d'erreur (silencieuse)
+   * Afficher une notification d'erreur (visuelle + console)
    */
   showError(message, details = "") {
     console.error(`❌ ${message}`, details ? `\n${details}` : "");
+    
+    // Affichage visuel avec alert en fallback
+    this._showVisualNotification(message, 'error');
   }
 
   /**
@@ -495,6 +534,86 @@ class NotificationManager {
    */
   confirm(message) {
     return confirm(`⚠️ ${message}`);
+  }
+
+  /**
+   * Afficher une notification visuelle (toast ou alert)
+   */
+  _showVisualNotification(message, type = 'info') {
+    // Vérifier s'il y a déjà un container de notifications
+    let container = document.getElementById('notification-container');
+    
+    if (!container) {
+      // Créer le container s'il n'existe pas
+      container = document.createElement('div');
+      container.id = 'notification-container';
+      container.style.cssText = `
+        position: fixed;
+        top: 20px;
+        right: 20px;
+        z-index: 10000;
+        max-width: 400px;
+      `;
+      document.body.appendChild(container);
+    }
+
+    // Créer la notification
+    const notification = document.createElement('div');
+    const bgColor = type === 'error' ? '#dc3545' : type === 'success' ? '#28a745' : '#007bff';
+    
+    notification.style.cssText = `
+      background: ${bgColor};
+      color: white;
+      padding: 12px 16px;
+      margin-bottom: 10px;
+      border-radius: 6px;
+      box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+      font-size: 14px;
+      line-height: 1.4;
+      animation: slideIn 0.3s ease-out;
+      cursor: pointer;
+    `;
+    
+    notification.textContent = message;
+    
+    // Ajouter l'animation CSS si elle n'existe pas
+    if (!document.getElementById('notification-styles')) {
+      const style = document.createElement('style');
+      style.id = 'notification-styles';
+      style.textContent = `
+        @keyframes slideIn {
+          from { transform: translateX(100%); opacity: 0; }
+          to { transform: translateX(0); opacity: 1; }
+        }
+        @keyframes slideOut {
+          from { transform: translateX(0); opacity: 1; }
+          to { transform: translateX(100%); opacity: 0; }
+        }
+      `;
+      document.head.appendChild(style);
+    }
+
+    container.appendChild(notification);
+
+    // Supprimer automatiquement après 5 secondes
+    setTimeout(() => {
+      notification.style.animation = 'slideOut 0.3s ease-in';
+      setTimeout(() => {
+        if (notification.parentNode) {
+          notification.parentNode.removeChild(notification);
+        }
+      }, 300);
+    }, 5000);
+
+    // Permettre de fermer en cliquant
+    notification.addEventListener('click', () => {
+      notification.style.animation = 'slideOut 0.3s ease-in';
+      setTimeout(() => {
+        if (notification.parentNode) {
+          notification.parentNode.removeChild(notification);
+        }
+      }, 300);
+    });
   }
 }
 

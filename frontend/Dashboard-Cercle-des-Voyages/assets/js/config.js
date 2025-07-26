@@ -1,8 +1,8 @@
 // Configuration de l'application
 const CONFIG = {
   // ====== INFORMATIONS DE VERSION ======
-  VERSION: "1.0.0",
-  BUILD_DATE: "2025-07-18",
+  VERSION: "1.0.1",
+  BUILD_DATE: "2025-07-25",
 
   // ====== CONFIGURATION ENVIRONNEMENT ======
   // Changez cette valeur pour basculer entre dev et prod

@@ -13,10 +13,7 @@ function mapPostTypeToTemplate(wordpressType) {
  * Obtenir le nom d'affichage d'un template
  */
 function getTemplateName(template) {
-  return (
-    CONFIG.TEMPLATE_NAMES[template] ||
-    template.charAt(0).toUpperCase() + template.slice(1)
-  );
+  return CONFIG.TEMPLATE_NAMES[template] || capitalize(template);
 }
 
 /**
@@ -95,7 +92,11 @@ function openHtmlWindow(htmlContent, title = "Brief") {
     newWindow.focus();
     return true;
   } else {
-    alert(CONFIG.ERROR_MESSAGES.POPUP_BLOCKED);
+    if (window.notificationManager) {
+      window.notificationManager.showError(CONFIG.ERROR_MESSAGES.POPUP_BLOCKED);
+    } else {
+      alert(CONFIG.ERROR_MESSAGES.POPUP_BLOCKED);
+    }
     return false;
   }
 }
@@ -155,24 +156,44 @@ function truncate(text, maxLength) {
 }
 
 /**
- * Valider une URL
+ * Utilitaires URL consolidés
  */
-function isValidUrl(string) {
-  try {
-    new URL(string);
-    return true;
-  } catch (_) {
-    return false;
-  }
-}
+const UrlUtils = {
+  /**
+   * Valider une URL
+   */
+  isValid(string) {
+    try {
+      new URL(string);
+      return true;
+    } catch (_) {
+      return false;
+    }
+  },
 
-/**
- * Extraire le domaine d'une URL
- */
-function extractDomain(url) {
-  try {
-    return new URL(url).hostname;
-  } catch (_) {
-    return url;
+  /**
+   * Extraire le domaine d'une URL
+   */
+  extractDomain(url) {
+    try {
+      return new URL(url).hostname;
+    } catch (_) {
+      return url;
+    }
+  },
+
+  /**
+   * Normaliser une URL (ajouter https si nécessaire)
+   */
+  normalize(url) {
+    if (!url) return '';
+    if (url.startsWith('http://') || url.startsWith('https://')) {
+      return url;
+    }
+    return `https://${url}`;
   }
-}
+};
+
+// Garder les fonctions pour la compatibilité
+function isValidUrl(string) { return UrlUtils.isValid(string); }
+function extractDomain(url) { return UrlUtils.extractDomain(url); }

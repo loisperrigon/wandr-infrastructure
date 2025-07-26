@@ -1,209 +1,47 @@
 /**
- * Service API pour gérer toutes les requêtes HTTP
+ * Service API simplifié pour le backend seulement
  */
 class ApiService {
   constructor() {
-    this.authHeader = null;
-    this.wpUrl = CONFIG.WORDPRESS_URL;
     this.apiUrl = CONFIG.API_BASE_URL;
+    this.apiClient = new HttpClient(this.apiUrl);
   }
 
   /**
-   * Définir l'en-tête d'authentification
+   * Configurer l'authentification avec le token JWT
    */
-  setAuthHeader(username, password) {
-    this.authHeader = btoa(`${username}:${password}`);
+  setupAuth() {
+    const authHeaders = authService.getAuthHeaders();
+    this.apiClient.setDefaultHeaders(authHeaders);
   }
 
   /**
-   * Effectuer une requête HTTP générique
+   * Vérifier l'authentification
    */
-  async request(url, options = {}) {
-    try {
-      const response = await fetch(url, {
-        headers: {
-          "Content-Type": "application/json",
-          ...options.headers,
-        },
-        // Timeout de 10 minutes pour les requêtes longues
-        signal: AbortSignal.timeout(10 * 60 * 1000), // 10 minutes
-        ...options,
-      });
-
-      if (!response.ok) {
-        throw new Error(`Erreur ${response.status}: ${response.statusText}`);
-      }
-
-      return await response.json();
-    } catch (error) {
-      console.error("Erreur API:", error);
-      throw error;
+  _requireAuth() {
+    if (!authService.isAuthenticated()) {
+      throw new Error('Authentification requise - veuillez vous reconnecter');
     }
-  }
-
-  /**
-   * Tester la connexion WordPress
-   */
-  async testWordPressConnection() {
-    if (!this.authHeader) {
-      throw new Error("Authentification requise");
-    }
-
-    return await this.request(`${this.wpUrl}/wp-json/wp/v2/posts?per_page=1`, {
-      headers: {
-        Authorization: `Basic ${this.authHeader}`,
-      },
-    });
-  }
-
-  /**
-   * Récupérer tous les types de posts WordPress
-   */
-  async getPostTypes() {
-    if (!this.authHeader) {
-      throw new Error("Authentification requise");
-    }
-
-    return await this.request(`${this.wpUrl}/wp-json/wp/v2/types`, {
-      headers: {
-        Authorization: `Basic ${this.authHeader}`,
-      },
-    });
-  }
-
-  /**
-   * Récupérer les contenus d'un type de post spécifique (première page)
-   */
-  async getPostsByType(endpoint, perPage = 15) {
-    if (!this.authHeader) {
-      throw new Error("Authentification requise");
-    }
-
-    try {
-      const response = await fetch(
-        `${this.wpUrl}/wp-json/wp/v2/${endpoint}?per_page=${perPage}&page=1&orderby=modified&order=desc`,
-        {
-          headers: {
-            "Content-Type": "application/json",
-            Authorization: `Basic ${this.authHeader}`,
-          },
-        }
-      );
-
-      if (!response.ok) {
-        // 404 est normal pour certains types de posts qui n'existent pas
-        if (response.status === 404) {
-          console.log(
-            `Type de post '${endpoint}' non disponible (404) - ignoré`
-          );
-          return { posts: [], totalPages: 0, totalPosts: 0 };
-        }
-        throw new Error(`Erreur ${response.status}: ${response.statusText}`);
-      }
-
-      const posts = await response.json();
-      const totalPosts = parseInt(response.headers.get("X-WP-Total") || "0");
-      const totalPages = parseInt(
-        response.headers.get("X-WP-TotalPages") || "1"
-      );
-
-      return { posts, totalPages, totalPosts };
-    } catch (error) {
-      // Gestion silencieuse des erreurs 404
-      if (error.message.includes("404")) {
-        console.log(`Type de post '${endpoint}' non disponible - ignoré`);
-        return { posts: [], totalPages: 0, totalPosts: 0 };
-      }
-
-      console.warn(`Erreur pour le type ${endpoint}:`, error.message);
-      return { posts: [], totalPages: 0, totalPosts: 0 };
-    }
-  }
-
-  /**
-   * Récupérer toutes les pages d'un type de post (pagination)
-   */
-  async getAllPostsByType(endpoint, perPage = 50, onProgress = null) {
-    const firstBatch = await this.getPostsByType(endpoint, perPage);
-
-    if (firstBatch.totalPages <= 1) {
-      return firstBatch.posts;
-    }
-
-    const allPosts = [...firstBatch.posts];
-    const promises = [];
-
-    // Charger les pages suivantes en parallèle
-    for (let page = 2; page <= firstBatch.totalPages; page++) {
-      const promise = this.getPostsByTypePage(endpoint, page, perPage).then(
-        (posts) => {
-          allPosts.push(...posts);
-          if (onProgress) {
-            onProgress(allPosts.length, firstBatch.totalPosts);
-          }
-          return posts;
-        }
-      );
-      promises.push(promise);
-    }
-
-    // Attendre toutes les pages
-    await Promise.all(promises);
-
-    return allPosts;
-  }
-
-  /**
-   * Récupérer une page spécifique d'un type de post
-   */
-  async getPostsByTypePage(endpoint, page, perPage = 50) {
-    if (!this.authHeader) {
-      throw new Error("Authentification requise");
-    }
-
-    try {
-      const response = await fetch(
-        `${this.wpUrl}/wp-json/wp/v2/${endpoint}?per_page=${perPage}&page=${page}&orderby=modified&order=desc`,
-        {
-          headers: {
-            "Content-Type": "application/json",
-            Authorization: `Basic ${this.authHeader}`,
-          },
-        }
-      );
-
-      if (!response.ok) {
-        return [];
-      }
-
-      return await response.json();
-    } catch (error) {
-      console.warn(
-        `Erreur page ${page} pour le type ${endpoint}:`,
-        error.message
-      );
-      return [];
-    }
+    
+    // Mettre à jour les headers si nécessaire
+    this.setupAuth();
   }
 
   /**
    * Récupérer tous les briefs depuis MongoDB
    */
   async getBriefs(filters = {}) {
-    const params = new URLSearchParams();
-
-    if (filters.status) params.append("status", filters.status);
-    if (filters.rest_base) params.append("rest_base", filters.rest_base);
-    if (filters.limit) params.append("limit", filters.limit);
-
-    const url = `${this.apiUrl}/briefs${
-      params.toString() ? "?" + params.toString() : ""
-    }`;
-
     try {
-      return await this.request(url);
+      const params = new URLSearchParams();
+
+      if (filters.status) params.append('status', filters.status);
+      if (filters.rest_base) params.append('rest_base', filters.rest_base);
+      if (filters.limit) params.append('limit', filters.limit);
+
+      const url = `/briefs${params.toString() ? '?' + params.toString() : ''}`;
+      return await this.apiClient.get(url);
     } catch (error) {
-      console.warn("Impossible de charger les briefs depuis MongoDB:", error);
+      errorHandler.handleApiError(error, 'briefs', 'chargement des briefs');
       return [];
     }
   }
@@ -212,36 +50,44 @@ class ApiService {
    * Récupérer un brief spécifique
    */
   async getBrief(pageId) {
-    return await this.request(`${this.apiUrl}/briefs/${pageId}`);
+    try {
+      return await this.apiClient.get(`/briefs/${pageId}`);
+    } catch (error) {
+      throw errorHandler.handleApiError(error, `brief ${pageId}`, 'lecture');
+    }
   }
 
   /**
    * Créer un nouveau brief
    */
   async createBrief(briefData) {
-    return await this.request(`${this.apiUrl}/briefs`, {
-      method: "POST",
-      body: JSON.stringify(briefData),
-    });
+    try {
+      return await this.apiClient.post('/briefs', briefData);
+    } catch (error) {
+      throw errorHandler.handleApiError(error, 'brief', 'création');
+    }
   }
 
   /**
    * Mettre à jour un brief
    */
   async updateBrief(pageId, updateData) {
-    return await this.request(`${this.apiUrl}/briefs/${pageId}`, {
-      method: "PUT",
-      body: JSON.stringify(updateData),
-    });
+    try {
+      return await this.apiClient.put(`/briefs/${pageId}`, updateData);
+    } catch (error) {
+      throw errorHandler.handleApiError(error, `brief ${pageId}`, 'mise à jour');
+    }
   }
 
   /**
    * Supprimer un brief
    */
   async deleteBrief(pageId) {
-    return await this.request(`${this.apiUrl}/briefs/${pageId}`, {
-      method: "DELETE",
-    });
+    try {
+      return await this.apiClient.delete(`/briefs/${pageId}`);
+    } catch (error) {
+      throw errorHandler.handleApiError(error, `brief ${pageId}`, 'suppression');
+    }
   }
 
   /**
@@ -249,12 +95,47 @@ class ApiService {
    */
   async getBriefStats() {
     try {
-      return await this.request(`${this.apiUrl}/briefs/stats`);
+      return await this.apiClient.get('/briefs/stats');
     } catch (error) {
-      console.warn("Impossible de charger les statistiques:", error);
+      errorHandler.handleApiError(error, 'statistiques', 'chargement des stats');
       return { by_status: [], by_rest_base: [] };
     }
   }
+
+  /**
+   * Récupérer toutes les pages (WordPress, Webflow, etc.) avec statut des briefs
+   * @param {string} source - Source des pages ('all', 'wordpress', etc.)
+   * @param {boolean} silent - Si true, ne pas afficher d'erreur à l'utilisateur
+   */
+  async getAllPages(source = 'all', silent = false) {
+    try {
+      const params = new URLSearchParams();
+      params.append('source', source);
+      
+      const url = `/pages?${params.toString()}`;
+      return await this.apiClient.get(url);
+    } catch (error) {
+      if (!silent) {
+        errorHandler.handleApiError(error, 'pages', 'chargement des pages');
+      } else {
+        console.warn('🔕 Erreur silencieuse lors du chargement des pages:', error.message);
+      }
+      return { data: [], stats: {} };
+    }
+  }
+
+  /**
+   * Vérifier si un brief existe pour une page
+   */
+  async checkBriefExists(pageId) {
+    try {
+      return await this.apiClient.get(`/pages/check-brief/${pageId}`);
+    } catch (error) {
+      errorHandler.handleApiError(error, `brief pour page ${pageId}`, 'vérification');
+      return { exists: false, brief: null };
+    }
+  }
+
 }
 
 // Instance globale du service API
