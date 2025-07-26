@@ -127,14 +127,14 @@ git add services/client-backend
 git commit -m "Update client backend"
 ```
 
-### Déploiement Frontend
+### Déploiement Frontend Statique (optionnel)
 
 ```bash
-# Déployer tous les frontends
-./scripts/deploy-nginx.sh frontend
+# Pour déployer un site statique simple (HTML/CSS/JS)
+./scripts/deploy-nginx.sh frontend /chemin/source nom-site
 
-# Déployer un frontend spécifique
-./scripts/deploy-nginx.sh frontend client-project
+# Exemple : déployer une landing page
+./scripts/deploy-nginx.sh frontend ./services/landing/public landing
 ```
 
 ## 📊 Monitoring

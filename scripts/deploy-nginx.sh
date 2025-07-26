@@ -107,126 +107,32 @@ deploy_common_configs() {
     fi
 }
 
-# Fonction pour builder un frontend si n�cessaire
-build_frontend_if_needed() {
-    local frontend_dir="$1"
-    local frontend_name="$2"
+# Fonction simple de déploiement frontend statique
+deploy_static_frontend() {
+    local source_dir="$1"
+    local target_name="$2"
     
-    # Si pas de package.json, c'est un frontend statique
-    if [ ! -f "$frontend_dir/package.json" ]; then
-        log_info "Frontend statique détecté (pas de package.json): $frontend_name"
-        return 0
+    if [ ! -d "$source_dir" ]; then
+        log_error "Dossier source non trouvé: $source_dir"
+        return 1
     fi
     
-    # Si il y a index.html à la racine, considérer comme statique
-    if [ -f "$frontend_dir/index.html" ]; then
-        log_info "Frontend statique détecté (index.html présent): $frontend_name"
-        return 0
-    fi
+    log_info "Déploiement frontend statique: $target_name"
     
-    # Sinon, vérifier les projets avec build
-    if grep -q '"build"' "$frontend_dir/package.json"; then
-        log_info "Script build détecté pour $frontend_name"
-        
-        # Vérifier si build/ ou dist/ existe déjà
-        if [ ! -d "$frontend_dir/build" ] && [ ! -d "$frontend_dir/dist" ]; then
-            log_warning "Aucun dossier build/dist trouvé pour $frontend_name"
-            log_info "Vous devez exécuter 'npm run build' manuellement avant le déploiement"
-            log_info "Ou utilisez: cd $frontend_dir && npm run build"
-            return 1
-        else
-            log_success "Dossier build existant trouvé pour $frontend_name"
-        fi
-    fi
+    # Créer le dossier cible
+    mkdir -p "/var/www/$target_name"
     
+    # Copier les fichiers
+    cp -r "$source_dir"/* "/var/www/$target_name/" 2>/dev/null || true
+    
+    # Permissions
+    chown -R www-data:www-data "/var/www/$target_name"
+    chmod -R 755 "/var/www/$target_name"
+    
+    log_success "Frontend déployé dans /var/www/$target_name"
     return 0
 }
 
-# Fonction de d�ploiement des frontends (CORRIG�E POUR FORCER LA MISE � JOUR)
-deploy_frontends() {
-    log_info "D�ploiement des frontends depuis l'infrastructure..."
-    
-    # Cr�er le r�pertoire web principal
-    mkdir -p /var/www
-    
-    # V�rifier que le dossier services existe dans l'infrastructure
-    if [ ! -d "$INFRASTRUCTURE_DIR/services" ]; then
-        log_warning "Aucun dossier services trouv� dans $INFRASTRUCTURE_DIR/services"
-        return 0
-    fi
-    
-    # Parcourir tous les projets et leurs frontends
-    for project_dir in "$INFRASTRUCTURE_DIR/services"/*; do
-        project_name=$(basename "$project_dir")
-        
-        # Chercher frontend dans les emplacements standards
-        frontend_locations=("$project_dir/frontend" "$project_dir/backend/frontend")
-        
-        for frontend_base in "${frontend_locations[@]}"; do
-            if [ -d "$frontend_base" ]; then
-                log_info "D�ploiement des frontends du projet: $project_name (depuis $(basename "$frontend_base"))"
-                
-                # Traiter le frontend directement, pas ses sous-dossiers
-                frontend_dir="$frontend_base"
-                frontend_name="$project_name"
-                
-                # Utiliser le nom du projet tel quel (pas de mapping hardcodé)
-                    
-                    log_info "D�ploiement frontend: $frontend_name"
-                    
-                    # V�rifier et pr�parer le build si n�cessaire
-                    if ! build_frontend_if_needed "$frontend_dir" "$frontend_name"; then
-                        log_error "Impossible de d�ployer $frontend_name - build manquant"
-                        continue
-                    fi
-                    
-                    # SUPPRIMER COMPL�TEMENT le dossier existant pour forcer la mise � jour
-                    if [ -d "/var/www/$frontend_name" ]; then
-                        log_warning "Suppression de l'ancien frontend /var/www/$frontend_name"
-                        rm -rf "/var/www/$frontend_name"
-                    fi
-                    
-                    # Cr�er le dossier de destination dans /var/www/
-                    mkdir -p "/var/www/$frontend_name"
-                    
-                    # D�tecter le type de frontend et copier accordingly
-                    if [ -d "$frontend_dir/dist" ]; then
-                        log_info "Frontend React/Vue d�tect� (dossier dist/)"
-                        source_dir="$frontend_dir/dist"
-                    elif [ -d "$frontend_dir/build" ]; then
-                        log_info "Frontend Create React App d�tect� (dossier build/)"
-                        source_dir="$frontend_dir/build"
-                    else
-                        log_info "Frontend statique d�tect� (HTML/CSS/JS)"
-                        source_dir="$frontend_dir"
-                    fi
-                    
-                    # Copier le frontend avec rsync pour une synchronisation compl�te
-                    if command -v rsync &> /dev/null; then
-                        log_info "Utilisation de rsync pour la synchronisation..."
-                        rsync -av --delete "$source_dir/" "/var/www/$frontend_name/"
-                    else
-                        log_info "Utilisation de cp pour la copie..."
-                        cp -r "$source_dir"/* "/var/www/$frontend_name/"
-                    fi
-                    
-                    # Permissions correctes
-                    chown -R www-data:www-data "/var/www/$frontend_name"
-                    chmod -R 755 "/var/www/$frontend_name"
-                    
-                    log_success "Frontend $frontend_name d�ploy� dans /var/www/$frontend_name"
-                    
-                    # Afficher la taille du frontend d�ploy�
-                    frontend_size=$(du -sh "/var/www/$frontend_name" | cut -f1)
-                    log_info "Taille du frontend $frontend_name: $frontend_size"
-        fi
-        done
-    done
-    
-    log_success "D�ploiement des frontends termin�"
-    log_info "Frontends disponibles dans /var/www/:"
-    ls -la /var/www/ | grep "^d"
-}
 
 # Fonction de d�ploiement des sites
 deploy_sites() {
@@ -311,52 +217,6 @@ rollback() {
     fi
 }
 
-# Fonction de d�ploiement d'un frontend sp�cifique
-deploy_specific_frontend() {
-    local frontend_name="$1"
-    
-    if [ -z "$frontend_name" ]; then
-        log_error "Nom du frontend non sp�cifi�"
-        return 1
-    fi
-    
-    local frontend_dir="$INFRASTRUCTURE_DIR/services/frontend/$frontend_name"
-    
-    if [ ! -d "$frontend_dir" ]; then
-        log_error "Frontend $frontend_name non trouv� dans $frontend_dir"
-        return 1
-    fi
-    
-    log_info "D�ploiement sp�cifique du frontend: $frontend_name"
-    
-    # Supprimer l'ancien frontend
-    if [ -d "/var/www/$frontend_name" ]; then
-        log_warning "Suppression de l'ancien frontend /var/www/$frontend_name"
-        rm -rf "/var/www/$frontend_name"
-    fi
-    
-    # Cr�er le dossier de destination
-    mkdir -p "/var/www/$frontend_name"
-    
-    # Copier avec rsync ou cp
-    if command -v rsync &> /dev/null; then
-        log_info "Utilisation de rsync pour la synchronisation..."
-        rsync -av --delete "$frontend_dir/" "/var/www/$frontend_name/"
-    else
-        log_info "Utilisation de cp pour la copie..."
-        cp -r "$frontend_dir"/* "/var/www/$frontend_name/"
-    fi
-    
-    # Permissions correctes
-    chown -R www-data:www-data "/var/www/$frontend_name"
-    chmod -R 755 "/var/www/$frontend_name"
-    
-    log_success "Frontend $frontend_name d�ploy� avec succ�s"
-    
-    # Afficher la taille
-    frontend_size=$(du -sh "/var/www/$frontend_name" | cut -f1)
-    log_info "Taille du frontend $frontend_name: $frontend_size"
-}
 
 # Fonction principale
 main() {
@@ -373,7 +233,6 @@ main() {
     
     # D�ploiement
     deploy_common_configs
-    deploy_frontends
     deploy_sites
     cleanup_old_sites
     
@@ -410,35 +269,32 @@ case "${1:-}" in
         test_nginx_config
         ;;
     "frontend")
-        if [ -n "${2:-}" ]; then
-            # D�ploiement d'un frontend sp�cifique
-            deploy_specific_frontend "$2"
-            reload_nginx
-            log_success "Frontend $2 d�ploy� !"
+        if [ -n "${2:-}" ] && [ -n "${3:-}" ]; then
+            # Usage: deploy-nginx.sh frontend /path/to/source target-name
+            deploy_static_frontend "$2" "$3"
+            log_success "Frontend déployé !"
         else
-            # D�ploiement de tous les frontends
-            log_info "D�ploiement rapide de tous les frontends..."
-            deploy_frontends
-            reload_nginx
-            log_success "Tous les frontends d�ploy�s !"
+            echo "Usage: $0 frontend /path/to/source target-name"
+            echo "Exemple: $0 frontend ./services/landing/public landing"
+            exit 1
         fi
         ;;
     "")
         main
         ;;
     *)
-        echo "Usage: $0 [rollback /path/to/backup|test|frontend [nom_frontend]]"
+        echo "Usage: $0 [test|rollback|frontend]"
         echo ""
         echo "Options:"
-        echo "  (aucun)              : D�ploiement complet"
-        echo "  test                 : Test de configuration uniquement"
-        echo "  rollback <backup>    : Restaurer une sauvegarde"
-        echo "  frontend             : D�ploiement rapide de tous les frontends"
-        echo "  frontend <nom>       : D�ploiement d'un frontend sp�cifique"
+        echo "  (aucun)                    : Déploiement nginx complet"
+        echo "  test                       : Test de configuration uniquement"
+        echo "  rollback <backup>          : Restaurer une sauvegarde"
+        echo "  frontend <source> <target> : Déployer un frontend statique"
         echo ""
         echo "Exemples:"
-        echo "  $0 frontend                # D�ploie tous les frontends"
-        echo "  $0 frontend client-project # D�ploie seulement ce frontend"
+        echo "  $0                                              # Déploie nginx"
+        echo "  $0 frontend ./landing/public landing-site       # Déploie site statique"
+        echo "  $0 rollback /root/nginx-backups/20240126_143022 # Restaure backup"
         exit 1
         ;;
 esac

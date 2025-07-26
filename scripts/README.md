@@ -8,11 +8,14 @@ Scripts utilitaires pour la gestion de l'infrastructure.
 Déploiement automatisé de la configuration nginx avec backup.
 
 ```bash
-# Déploiement complet
+# Déploiement complet nginx
 ./scripts/deploy-nginx.sh
 
 # Test de configuration seulement
 ./scripts/deploy-nginx.sh test
+
+# Déployer un frontend statique
+./scripts/deploy-nginx.sh frontend /source/path target-name
 
 # Rollback vers un backup
 ./scripts/deploy-nginx.sh rollback /path/to/backup
