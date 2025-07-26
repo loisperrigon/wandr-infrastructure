@@ -38,6 +38,16 @@ The infrastructure uses a modular approach with Git submodules for business scal
 
 ## Common Commands
 
+### Environment Setup
+```bash
+# Initial setup (required once)
+cp .env.example .env
+# Edit .env with your configuration values
+
+# Verify all services are running
+docker compose ps
+```
+
 ### Docker Services Management
 ```bash
 # Start all services
@@ -58,6 +68,9 @@ docker compose up -d --build cercle-des-voyages-backend
 docker compose logs -f n8n
 docker compose logs -f cercle-des-voyages-backend
 docker compose logs scraping-backend
+
+# Check resource usage
+docker stats
 ```
 
 ### Submodule Management (IMPORTANT)
@@ -124,8 +137,11 @@ npm install
 npm run dev      # Development server on port 8080
 npm start        # Production server on port 8081
 
+# Deploy frontend changes
+./scripts/deploy-nginx.sh frontend
+
 # The deploy script automatically detects:
-# - HTML/CSS/JS static files → copies directly
+# - HTML/CSS/JS static files → copies directly from services/project/frontend/
 # - React/Vue projects with dist/ or build/ → copies build output
 
 # For future React/Vue projects:
@@ -133,6 +149,9 @@ cd services/project/frontend
 npm run build    # Generate dist/ or build/
 cd ../../..
 ./scripts/deploy-nginx.sh  # Auto-detects and deploys build output
+
+# Deploy specific frontend only
+./scripts/deploy-nginx.sh frontend dashboard
 ```
 
 ### Service Monitoring
@@ -290,5 +309,15 @@ git submodule update --init services/problematic-submodule
 4. **Volume names are preserved**: No risk of data loss during infrastructure updates
 5. **Standard directory names**: Use `frontend/` and `backend/` for consistency
 6. **Business modular**: Each `services/` directory should be independently sellable
+7. **Environment configuration**: Always copy `.env.example` to `.env` and configure before first run
+8. **Service isolation**: All services bind to `127.0.0.1` only, external access via nginx reverse proxy
 
 The infrastructure includes automatic backup and rollback functionality for safe configuration updates.
+
+## Quick Development Workflow
+
+1. **Update submodules**: `./scripts/update-submodules.sh`
+2. **Make changes** in service directories
+3. **For backend changes**: `docker compose up -d --build [service-name]`
+4. **For frontend changes**: `./scripts/deploy-nginx.sh frontend`
+5. **Test and verify**: `docker compose ps` and check service logs

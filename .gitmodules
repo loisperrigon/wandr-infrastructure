@@ -1,6 +1,0 @@
-[submodule "services/scraping-tools/backend"]
-	path = services/scraping-tools/backend
-	url = https://github.com/La-Refonte/scraping-backend.git
-[submodule "services/cercle-des-voyages"]
-	path = services/cercle-des-voyages
-	url = https://github.com/La-Refonte/Dashboard-Cercle-des-Voyages.git

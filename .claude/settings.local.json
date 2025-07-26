@@ -15,7 +15,9 @@
       "Bash(docker volume:*)",
       "Bash(docker compose:*)",
       "Bash(dos2unix:*)",
-      "WebFetch(domain:docs.n8n.io)"
+      "WebFetch(domain:docs.n8n.io)",
+      "Bash(git remote:*)",
+      "Bash(git add:*)"
     ],
     "deny": []
   }
