@@ -5,10 +5,10 @@ services:
     ports:
       - "127.0.0.1:5678:5678"
     environment:
-      N8N_HOST: n8n.larefonte.store
-      WEBHOOK_URL: https://n8n.larefonte.store/
-      WEBHOOK_TUNNEL_URL: https://n8n.larefonte.store/
-      VUE_APP_URL_BASE_API: https://n8n.larefonte.store/
+      N8N_HOST: ${N8N_HOST:-n8n.larefonte.store}
+      WEBHOOK_URL: https://${N8N_HOST:-n8n.larefonte.store}/
+      WEBHOOK_TUNNEL_URL: https://${N8N_HOST:-n8n.larefonte.store}/
+      VUE_APP_URL_BASE_API: https://${N8N_HOST:-n8n.larefonte.store}/
       N8N_PORT: 5678
       N8N_PROTOCOL: https
       GENERIC_TIMEZONE: Europe/Paris
@@ -24,7 +24,7 @@ services:
       N8N_EXECUTION_TIMEOUT: 3600
       N8N_EXECUTION_TIMEOUT_MAX: 7200
       EXECUTIONS_TIMEOUT: 3600
-      EXECUTIONS_TIMEOUT_MAX: 7200     
+      EXECUTIONS_TIMEOUT_MAX: 7200
       MCP_OPENAPI_MCP_HEADERS: '{"Authorization": "Bearer ${NOTION_API_TOKEN}", "Notion-Version": "2022-06-28"}'
     env_file:
       - .env
@@ -33,7 +33,7 @@ services:
 
   scraping-backend:
     build:
-      context: /root/projects/shared/scraping-backend
+      context: ./services/scraping-tools/backend/
       dockerfile: Dockerfile
     restart: always
     ports:
@@ -48,13 +48,13 @@ services:
       DATA_DIR: /usr/src/app/dist/data/navigators
     working_dir: /usr/src/app
     env_file:
-      - .env 
+      - .env
     volumes:
-      - scraping_backend_data:/usr/src/app/dist/data/navigators
+      - scraping_data:/usr/src/app/dist/data/navigators
 
   novnc:
     build:
-      context: /root/projects/shared/novnc
+      context: ./services/scraping-tools/novnc/
       dockerfile: Dockerfile
     platform: linux/arm64
     container_name: novnc
@@ -68,21 +68,21 @@ services:
       - VNC_SERVER=scraping-backend:5900
     depends_on:
       - scraping-backend
-      
+
   cercle-des-voyages-backend:
     build:
-      context: /root/projects/external/Dashboard-Cercle-des-Voyages/backend/
+      context: ./services/cercle-des-voyages/backend/
       dockerfile: Dockerfile
     restart: always
     ports:
       - "127.0.0.1:3001:3001"
     env_file:
-      - /root/projects/external/Dashboard-Cercle-des-Voyages/backend/.env
+      - .env
 
 volumes:
   n8n_data:
     external: true
     name: project-n8n_n8n_data
-  scraping_backend_data:
+  scraping_data:
     external: true
     name: project-n8n_scraping-backend_data

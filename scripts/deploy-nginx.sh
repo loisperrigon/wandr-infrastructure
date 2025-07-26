@@ -1,13 +1,13 @@
 #!/bin/bash
 
 # ===========================================
-# Script de déploiement Nginx LaRefonte
+# Script de dï¿½ploiement Nginx LaRefonte
 # ===========================================
 
-set -e  # Arrêter en cas d'erreur
+set -e  # Arrï¿½ter en cas d'erreur
 
 # Variables
-INFRASTRUCTURE_DIR="/root/larefonte-infrastructure"
+INFRASTRUCTURE_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 NGINX_SITES_AVAILABLE="/etc/nginx/sites-available"
 NGINX_SITES_ENABLED="/etc/nginx/sites-enabled"
 NGINX_CONF_DIR="/etc/nginx"
@@ -43,12 +43,12 @@ backup_current_config() {
     
     if [ -d "$NGINX_SITES_AVAILABLE" ]; then
         cp -r "$NGINX_SITES_AVAILABLE" "$BACKUP_DIR/"
-        log_success "Sites-available sauvegardés"
+        log_success "Sites-available sauvegardï¿½s"
     fi
     
     if [ -d "$NGINX_SITES_ENABLED" ]; then
         cp -r "$NGINX_SITES_ENABLED" "$BACKUP_DIR/"
-        log_success "Sites-enabled sauvegardés"
+        log_success "Sites-enabled sauvegardï¿½s"
     fi
     
     if [ -f "$NGINX_CONF_DIR/nginx.conf" ]; then
@@ -63,123 +63,179 @@ backup_current_config() {
         cp -r "$NGINX_CONF_DIR/conf.d" "$BACKUP_DIR/"
     fi
     
-    log_success "Sauvegarde complète dans : $BACKUP_DIR"
+    log_success "Sauvegarde complï¿½te dans : $BACKUP_DIR"
 }
 
-# Fonction de vérification des prérequis
+# Fonction de vï¿½rification des prï¿½requis
 check_prerequisites() {
-    log_info "Vérification des prérequis..."
+    log_info "Vï¿½rification des prï¿½requis..."
     
-    # Vérifier que nginx est installé
+    # Vï¿½rifier que nginx est installï¿½
     if ! command -v nginx &> /dev/null; then
-        log_error "Nginx n'est pas installé !"
+        log_error "Nginx n'est pas installï¿½ !"
         exit 1
     fi
     
-    # Vérifier que le répertoire infrastructure existe
+    # Vï¿½rifier que le rï¿½pertoire infrastructure existe
     if [ ! -d "$INFRASTRUCTURE_DIR/nginx" ]; then
-        log_error "Répertoire infrastructure non trouvé : $INFRASTRUCTURE_DIR/nginx"
+        log_error "Rï¿½pertoire infrastructure non trouvï¿½ : $INFRASTRUCTURE_DIR/nginx"
         exit 1
     fi
     
-    # Vérifier les certificats SSL
+    # Vï¿½rifier les certificats SSL
     if [ ! -f "/etc/letsencrypt/live/larefonte.store/fullchain.pem" ]; then
-        log_warning "Certificats SSL non trouvés. Assurez-vous qu'ils sont générés."
+        log_warning "Certificats SSL non trouvï¿½s. Assurez-vous qu'ils sont gï¿½nï¿½rï¿½s."
     fi
     
-    log_success "Prérequis OK"
+    log_success "Prï¿½requis OK"
 }
 
-# Fonction de déploiement des configurations communes
+# Fonction de dï¿½ploiement des configurations communes
 deploy_common_configs() {
-    log_info "Déploiement des configurations communes..."
+    log_info "Dï¿½ploiement des configurations communes..."
     
-    # Déployer la config SSL commune
+    # Dï¿½ployer la config SSL commune
     if [ -f "$INFRASTRUCTURE_DIR/nginx/ssl/options-ssl-nginx.conf" ]; then
         cp "$INFRASTRUCTURE_DIR/nginx/ssl/options-ssl-nginx.conf" "/etc/nginx/"
-        log_success "Configuration SSL commune déployée"
+        log_success "Configuration SSL commune dï¿½ployï¿½e"
     fi
     
-    # Déployer la config générale
+    # Dï¿½ployer la config gï¿½nï¿½rale
     if [ -f "$INFRASTRUCTURE_DIR/nginx/conf.d/general.conf" ]; then
         cp "$INFRASTRUCTURE_DIR/nginx/conf.d/general.conf" "/etc/nginx/conf.d/"
-        log_success "Configuration générale déployée"
+        log_success "Configuration gï¿½nï¿½rale dï¿½ployï¿½e"
     fi
 }
 
-# Fonction de déploiement des frontends (CORRIGÉE POUR FORCER LA MISE À JOUR)
-deploy_frontends() {
-    log_info "Déploiement des frontends depuis l'infrastructure..."
+# Fonction pour builder un frontend si nï¿½cessaire
+build_frontend_if_needed() {
+    local frontend_dir="$1"
+    local frontend_name="$2"
     
-    # Créer le répertoire web principal
+    # Vï¿½rifier s'il y a un package.json (projet Node.js)
+    if [ -f "$frontend_dir/package.json" ]; then
+        # Vï¿½rifier s'il y a un script build
+        if grep -q '"build"' "$frontend_dir/package.json"; then
+            log_info "Script build dï¿½tectï¿½ pour $frontend_name"
+            
+            # Vï¿½rifier si build/ ou dist/ existe dï¿½jï¿½
+            if [ ! -d "$frontend_dir/build" ] && [ ! -d "$frontend_dir/dist" ]; then
+                log_warning "Aucun dossier build/dist trouvï¿½ pour $frontend_name"
+                log_info "Vous devez exï¿½cuter 'npm run build' manuellement avant le dï¿½ploiement"
+                log_info "Ou utilisez: cd $frontend_dir && npm run build"
+                return 1
+            else
+                log_success "Dossier build existant trouvï¿½ pour $frontend_name"
+            fi
+        fi
+    fi
+    return 0
+}
+
+# Fonction de dï¿½ploiement des frontends (CORRIGï¿½E POUR FORCER LA MISE ï¿½ JOUR)
+deploy_frontends() {
+    log_info "Dï¿½ploiement des frontends depuis l'infrastructure..."
+    
+    # Crï¿½er le rï¿½pertoire web principal
     mkdir -p /var/www
     
-    # Vérifier que le dossier frontend existe dans l'infrastructure
-    if [ ! -d "$INFRASTRUCTURE_DIR/frontend" ]; then
-        log_warning "Aucun dossier frontend trouvé dans $INFRASTRUCTURE_DIR/frontend"
+    # Vï¿½rifier que le dossier services existe dans l'infrastructure
+    if [ ! -d "$INFRASTRUCTURE_DIR/services" ]; then
+        log_warning "Aucun dossier services trouvï¿½ dans $INFRASTRUCTURE_DIR/services"
         return 0
     fi
     
-    # Parcourir tous les frontends dans l'infrastructure
-    for frontend_dir in "$INFRASTRUCTURE_DIR/frontend"/*; do
-        if [ -d "$frontend_dir" ]; then
-            # Extraire le nom du frontend
-            frontend_name=$(basename "$frontend_dir")
-            
-            log_info "Déploiement frontend: $frontend_name"
-            
-            # SUPPRIMER COMPLÈTEMENT le dossier existant pour forcer la mise à jour
-            if [ -d "/var/www/$frontend_name" ]; then
-                log_warning "Suppression de l'ancien frontend /var/www/$frontend_name"
-                rm -rf "/var/www/$frontend_name"
-            fi
-            
-            # Créer le dossier de destination dans /var/www/
-            mkdir -p "/var/www/$frontend_name"
-            
-            # Copier le frontend avec rsync pour une synchronisation complète
-            if command -v rsync &> /dev/null; then
-                log_info "Utilisation de rsync pour la synchronisation..."
-                rsync -av --delete "$frontend_dir/" "/var/www/$frontend_name/"
-            else
-                log_info "Utilisation de cp pour la copie..."
-                cp -r "$frontend_dir"/* "/var/www/$frontend_name/"
-            fi
-            
-            # Permissions correctes
-            chown -R www-data:www-data "/var/www/$frontend_name"
-            chmod -R 755 "/var/www/$frontend_name"
-            
-            log_success "Frontend $frontend_name déployé dans /var/www/$frontend_name"
-            
-            # Afficher la taille du frontend déployé
-            frontend_size=$(du -sh "/var/www/$frontend_name" | cut -f1)
-            log_info "Taille du frontend $frontend_name: $frontend_size"
+    # Parcourir tous les projets et leurs frontends
+    for project_dir in "$INFRASTRUCTURE_DIR/services"/*; do
+        project_name=$(basename "$project_dir")
+        
+        # Chercher frontend dans les emplacements standards
+        frontend_locations=("$project_dir/frontend" "$project_dir/backend/frontend")
+        
+        for frontend_base in "${frontend_locations[@]}"; do
+            if [ -d "$frontend_base" ]; then
+                log_info "Dï¿½ploiement des frontends du projet: $project_name (depuis $(basename "$frontend_base"))"
+                
+                for frontend_dir in "$frontend_base"/*; do
+                if [ -d "$frontend_dir" ]; then
+                    # Extraire le nom du frontend
+                    frontend_name=$(basename "$frontend_dir")
+                    
+                    log_info "Dï¿½ploiement frontend: $frontend_name"
+                    
+                    # Vï¿½rifier et prï¿½parer le build si nï¿½cessaire
+                    if ! build_frontend_if_needed "$frontend_dir" "$frontend_name"; then
+                        log_error "Impossible de dï¿½ployer $frontend_name - build manquant"
+                        continue
+                    fi
+                    
+                    # SUPPRIMER COMPLï¿½TEMENT le dossier existant pour forcer la mise ï¿½ jour
+                    if [ -d "/var/www/$frontend_name" ]; then
+                        log_warning "Suppression de l'ancien frontend /var/www/$frontend_name"
+                        rm -rf "/var/www/$frontend_name"
+                    fi
+                    
+                    # Crï¿½er le dossier de destination dans /var/www/
+                    mkdir -p "/var/www/$frontend_name"
+                    
+                    # Dï¿½tecter le type de frontend et copier accordingly
+                    if [ -d "$frontend_dir/dist" ]; then
+                        log_info "Frontend React/Vue dï¿½tectï¿½ (dossier dist/)"
+                        source_dir="$frontend_dir/dist"
+                    elif [ -d "$frontend_dir/build" ]; then
+                        log_info "Frontend Create React App dï¿½tectï¿½ (dossier build/)"
+                        source_dir="$frontend_dir/build"
+                    else
+                        log_info "Frontend statique dï¿½tectï¿½ (HTML/CSS/JS)"
+                        source_dir="$frontend_dir"
+                    fi
+                    
+                    # Copier le frontend avec rsync pour une synchronisation complï¿½te
+                    if command -v rsync &> /dev/null; then
+                        log_info "Utilisation de rsync pour la synchronisation..."
+                        rsync -av --delete "$source_dir/" "/var/www/$frontend_name/"
+                    else
+                        log_info "Utilisation de cp pour la copie..."
+                        cp -r "$source_dir"/* "/var/www/$frontend_name/"
+                    fi
+                    
+                    # Permissions correctes
+                    chown -R www-data:www-data "/var/www/$frontend_name"
+                    chmod -R 755 "/var/www/$frontend_name"
+                    
+                    log_success "Frontend $frontend_name dï¿½ployï¿½ dans /var/www/$frontend_name"
+                    
+                    # Afficher la taille du frontend dï¿½ployï¿½
+                    frontend_size=$(du -sh "/var/www/$frontend_name" | cut -f1)
+                    log_info "Taille du frontend $frontend_name: $frontend_size"
+                fi
+            done
         fi
+        done
     done
     
-    log_success "Déploiement des frontends terminé"
+    log_success "Dï¿½ploiement des frontends terminï¿½"
     log_info "Frontends disponibles dans /var/www/:"
     ls -la /var/www/ | grep "^d"
 }
 
-# Fonction de déploiement des sites
+# Fonction de dï¿½ploiement des sites
 deploy_sites() {
-    log_info "Déploiement des configurations de sites..."
+    log_info "Dï¿½ploiement des configurations de sites..."
     
     # Copier les fichiers de configuration
     for config_file in "$INFRASTRUCTURE_DIR/nginx/sites-available"/*.conf; do
         if [ -f "$config_file" ]; then
             filename=$(basename "$config_file")
-            log_info "Déploiement de $filename"
+            log_info "Dï¿½ploiement de $filename"
             cp "$config_file" "$NGINX_SITES_AVAILABLE/"
             
-            # Créer le lien symbolique dans sites-enabled
+            # Crï¿½er le lien symbolique dans sites-enabled
             if [ ! -L "$NGINX_SITES_ENABLED/$filename" ]; then
                 ln -s "$NGINX_SITES_AVAILABLE/$filename" "$NGINX_SITES_ENABLED/"
-                log_success "Lien symbolique créé pour $filename"
+                log_success "Lien symbolique crï¿½ï¿½ pour $filename"
             else
-                log_info "Lien symbolique existe déjà pour $filename"
+                log_info "Lien symbolique existe dï¿½jï¿½ pour $filename"
             fi
         fi
     done
@@ -193,12 +249,12 @@ cleanup_old_sites() {
     OLD_CONFIG="/etc/nginx/sites-enabled/default"
     if [ -L "$OLD_CONFIG" ] || [ -f "$OLD_CONFIG" ]; then
         rm -f "$OLD_CONFIG"
-        log_success "Ancienne configuration default supprimée"
+        log_success "Ancienne configuration default supprimï¿½e"
     fi
     
-    # Supprimer les liens cassés
+    # Supprimer les liens cassï¿½s
     find "$NGINX_SITES_ENABLED" -type l ! -exec test -e {} \; -delete 2>/dev/null || true
-    log_success "Liens symboliques cassés supprimés"
+    log_success "Liens symboliques cassï¿½s supprimï¿½s"
 }
 
 # Fonction de test de configuration
@@ -219,7 +275,7 @@ reload_nginx() {
     log_info "Rechargement de Nginx..."
     
     if systemctl reload nginx; then
-        log_success "Nginx rechargé avec succès"
+        log_success "Nginx rechargï¿½ avec succï¿½s"
     else
         log_error "Erreur lors du rechargement de Nginx"
         return 1
@@ -228,7 +284,7 @@ reload_nginx() {
 
 # Fonction de rollback
 rollback() {
-    log_warning "Restauration de la configuration précédente..."
+    log_warning "Restauration de la configuration prï¿½cï¿½dente..."
     
     if [ -d "$BACKUP_DIR" ]; then
         cp -r "$BACKUP_DIR/sites-available"/* "$NGINX_SITES_AVAILABLE/" 2>/dev/null || true
@@ -237,32 +293,32 @@ rollback() {
         cp -r "$BACKUP_DIR/conf.d"/* "$NGINX_CONF_DIR/conf.d/" 2>/dev/null || true
         
         if nginx -t && systemctl reload nginx; then
-            log_success "Rollback effectué avec succès"
+            log_success "Rollback effectuï¿½ avec succï¿½s"
         else
-            log_error "Échec du rollback. Intervention manuelle requise."
+            log_error "ï¿½chec du rollback. Intervention manuelle requise."
         fi
     else
         log_error "Pas de sauvegarde disponible pour le rollback"
     fi
 }
 
-# Fonction de déploiement d'un frontend spécifique
+# Fonction de dï¿½ploiement d'un frontend spï¿½cifique
 deploy_specific_frontend() {
     local frontend_name="$1"
     
     if [ -z "$frontend_name" ]; then
-        log_error "Nom du frontend non spécifié"
+        log_error "Nom du frontend non spï¿½cifiï¿½"
         return 1
     fi
     
-    local frontend_dir="$INFRASTRUCTURE_DIR/frontend/$frontend_name"
+    local frontend_dir="$INFRASTRUCTURE_DIR/services/frontend/$frontend_name"
     
     if [ ! -d "$frontend_dir" ]; then
-        log_error "Frontend $frontend_name non trouvé dans $frontend_dir"
+        log_error "Frontend $frontend_name non trouvï¿½ dans $frontend_dir"
         return 1
     fi
     
-    log_info "Déploiement spécifique du frontend: $frontend_name"
+    log_info "Dï¿½ploiement spï¿½cifique du frontend: $frontend_name"
     
     # Supprimer l'ancien frontend
     if [ -d "/var/www/$frontend_name" ]; then
@@ -270,7 +326,7 @@ deploy_specific_frontend() {
         rm -rf "/var/www/$frontend_name"
     fi
     
-    # Créer le dossier de destination
+    # Crï¿½er le dossier de destination
     mkdir -p "/var/www/$frontend_name"
     
     # Copier avec rsync ou cp
@@ -286,7 +342,7 @@ deploy_specific_frontend() {
     chown -R www-data:www-data "/var/www/$frontend_name"
     chmod -R 755 "/var/www/$frontend_name"
     
-    log_success "Frontend $frontend_name déployé avec succès"
+    log_success "Frontend $frontend_name dï¿½ployï¿½ avec succï¿½s"
     
     # Afficher la taille
     frontend_size=$(du -sh "/var/www/$frontend_name" | cut -f1)
@@ -296,17 +352,17 @@ deploy_specific_frontend() {
 # Fonction principale
 main() {
     echo "=========================================="
-    echo "  Déploiement Infrastructure Nginx"
+    echo "  Dï¿½ploiement Infrastructure Nginx"
     echo "  LaRefonte - $(date)"
     echo "=========================================="
     
-    # Vérifications
+    # Vï¿½rifications
     check_prerequisites
     
     # Sauvegarde
     backup_current_config
     
-    # Déploiement
+    # Dï¿½ploiement
     deploy_common_configs
     deploy_frontends
     deploy_sites
@@ -315,7 +371,7 @@ main() {
     # Test et application
     if test_nginx_config; then
         reload_nginx
-        log_success "Déploiement terminé avec succès !"
+        log_success "Dï¿½ploiement terminï¿½ avec succï¿½s !"
         
         echo ""
         echo "?? Configuration active :"
@@ -324,12 +380,12 @@ main() {
         echo "- N8N Workflows  : https://n8n.larefonte.store (N8N port 5678)"
         echo "- Cercle Voyages : https://cercledesvoyages.larefonte.store (SPA + API port 3001)"
         echo ""
-        echo "?? Frontends déployés dans /var/www/"
+        echo "?? Frontends dï¿½ployï¿½s dans /var/www/"
         echo "?? Logs disponibles dans /var/log/nginx/"
         echo "?? Sauvegarde dans : $BACKUP_DIR"
         
     else
-        log_error "Échec du déploiement"
+        log_error "ï¿½chec du dï¿½ploiement"
         rollback
         exit 1
     fi
@@ -351,16 +407,16 @@ case "${1:-}" in
         ;;
     "frontend")
         if [ -n "${2:-}" ]; then
-            # Déploiement d'un frontend spécifique
+            # Dï¿½ploiement d'un frontend spï¿½cifique
             deploy_specific_frontend "$2"
             reload_nginx
-            log_success "Frontend $2 déployé !"
+            log_success "Frontend $2 dï¿½ployï¿½ !"
         else
-            # Déploiement de tous les frontends
-            log_info "Déploiement rapide de tous les frontends..."
+            # Dï¿½ploiement de tous les frontends
+            log_info "Dï¿½ploiement rapide de tous les frontends..."
             deploy_frontends
             reload_nginx
-            log_success "Tous les frontends déployés !"
+            log_success "Tous les frontends dï¿½ployï¿½s !"
         fi
         ;;
     "")
@@ -370,15 +426,15 @@ case "${1:-}" in
         echo "Usage: $0 [rollback /path/to/backup|test|frontend [nom_frontend]]"
         echo ""
         echo "Options:"
-        echo "  (aucun)              : Déploiement complet"
+        echo "  (aucun)              : Dï¿½ploiement complet"
         echo "  test                 : Test de configuration uniquement"
         echo "  rollback <backup>    : Restaurer une sauvegarde"
-        echo "  frontend             : Déploiement rapide de tous les frontends"
-        echo "  frontend <nom>       : Déploiement d'un frontend spécifique"
+        echo "  frontend             : Dï¿½ploiement rapide de tous les frontends"
+        echo "  frontend <nom>       : Dï¿½ploiement d'un frontend spï¿½cifique"
         echo ""
         echo "Exemples:"
-        echo "  $0 frontend                              # Déploie tous les frontends"
-        echo "  $0 frontend Dashboard-Cercle-des-Voyages # Déploie seulement ce frontend"
+        echo "  $0 frontend                              # Dï¿½ploie tous les frontends"
+        echo "  $0 frontend Dashboard-Cercle-des-Voyages # Dï¿½ploie seulement ce frontend"
         exit 1
         ;;
 esac

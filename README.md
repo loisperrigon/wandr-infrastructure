@@ -1,188 +1,234 @@
-??? Infrastructure LaRefonte
-Infrastructure compl�te et professionnelle pour l'�cosyst�me LaRefonte avec nginx, Docker et monitoring.
-?? Services d�ploy�s
-? Services op�rationnels
+# Infrastructure LaRefonte
 
-?? LaRefonte Main : https://larefonte.store (Express + Backend de scraping)
-?? N8N Workflows : https://n8n.larefonte.store (Automatisation)
-??? VNC Access : https://vnc.larefonte.store (Acc�s distant s�curis�)
-?? Cercle des Voyages : https://cercledesvoyages.larefonte.store (Dashboard analytique)
+Infrastructure complète et professionnelle pour l'écosystème LaRefonte avec nginx, Docker et architecture modulaire par submodules.
 
-??? Architecture
+## 🚀 Services déployés
+
+✅ **Services opérationnels**
+
+- 🌐 **N8N Workflows** : https://n8n.larefonte.store (Automatisation)
+- 📊 **Cercle des Voyages** : https://cercledesvoyages.larefonte.store (Dashboard + API)
+- 🤖 **Scraping Tools** : Backend scraping + interface VNC
+- 🔒 **VNC Access** : https://vnc.larefonte.store (Accès distant sécurisé)
+
+## 🏗️ Architecture Modulaire
+
+```
 larefonte-infrastructure/
-+-- nginx/                          # Configuration nginx modulaire
-�   +-- sites-available/            # Configurations par service
-�   �   +-- 01-larefonte-main.conf  # Express + VNC
-�   �   +-- 02-n8n.conf            # N8N workflows
-�   �   +-- 03-cercledesvoyages.conf # Dashboard SPA
-�   +-- ssl/                        # SSL centralis�
-�   �   +-- options-ssl-nginx.conf  # Configuration SSL commune
-�   +-- conf.d/                     # Configuration g�n�rale
-�       +-- general.conf            # Headers s�curit� + rate limiting
-+-- scripts/                        # Scripts d'automatisation
-�   +-- deploy-nginx.sh            # D�ploiement automatis�
-�   +-- backup-nginx.sh            # Sauvegarde
-�   +-- reload-nginx.sh            # Rechargement s�curis�
-+-- docker-compose.yml             # Orchestration services
-+-- .env                           # Variables d'environnement
-+-- README.md                      # Cette documentation
-?? Gestion des services
-D�marrage/Arr�t
-bash# D�marrer tous les services
-docker compose up -d
+├── services/                           # Services par projet (submodules)
+│   ├── cercle-des-voyages/            # Submodule Dashboard complet
+│   │   ├── backend/                   # API Node.js + MongoDB
+│   │   ├── frontend/                  # Interface utilisateur modulaire
+│   │   └── Documentation/             # Docs projet
+│   └── scraping-tools/
+│       ├── backend/                   # Submodule backend scraping
+│       └── novnc/                     # Interface VNC web
+├── nginx/                             # Configuration nginx modulaire
+│   ├── sites-available/              # Configurations par service
+│   ├── ssl/                          # SSL centralisé
+│   └── conf.d/                       # Configuration générale
+├── scripts/                          # Scripts d'automatisation
+│   ├── deploy-nginx.sh              # Déploiement automatisé
+│   ├── update-submodules.sh         # Mise à jour submodules
+│   ├── n8n-workflows-backup.sh      # Backup sécurisé workflows N8N vers GitHub
+│   └── backup-nginx.sh              # Sauvegarde nginx
+├── docker-compose.yml               # Orchestration services
+├── CLAUDE.md                        # Guide développeur
+├── DEPLOYMENT.md                    # Guide déploiement
+└── .env.example                     # Configuration portable
+```
 
-# Arr�ter tous les services
-docker compose down
+## 🚀 Démarrage Rapide
 
-# Red�marrer un service sp�cifique
-docker compose restart n8n
-docker compose restart scraping-backend
-Logs et monitoring
-bash# Logs globaux
-docker compose logs
+### Installation Complète
 
-# Logs par service
-docker compose logs n8n
-docker compose logs scraping-backend
-docker compose logs novnc
-
-# Logs nginx par service
-tail -f /var/log/nginx/larefonte-main.access.log
-tail -f /var/log/nginx/n8n.access.log
-tail -f /var/log/nginx/vnc.access.log
-tail -f /var/log/nginx/cercledesvoyages.access.log
-?? Gestion nginx
-D�ploiement de configuration
-bash# D�ploiement complet avec sauvegarde automatique
-./scripts/deploy-nginx.sh
-
-# Test de configuration uniquement
-./scripts/deploy-nginx.sh test
-
-# Rollback vers une sauvegarde
-./scripts/deploy-nginx.sh rollback /root/nginx-backups/20250108_143022
-Modification de configuration
-bash# Modifier une configuration
-nano nginx/sites-available/01-larefonte-main.conf
-
-# D�ployer les changements
-./scripts/deploy-nginx.sh
-
-# En cas de probl�me, rollback automatique
-?? S�curit�
-SSL/HTTPS
-
-Certificats Let's Encrypt automatiques pour tous les domaines
-Configuration SSL moderne (TLS 1.2/1.3 uniquement)
-HSTS activ� sur tous les sites
-OCSP Stapling pour validation rapide
-
-Headers de s�curit�
-
-X-Content-Type-Options: nosniff
-X-XSS-Protection: 1; mode=block
-Referrer-Policy: strict-origin-when-cross-origin
-X-Frame-Options adapt� par service
-Content-Security-Policy pour les SPA
-
-Rate limiting
-
-API : 30 req/min
-General : 60 req/min
-Connexions simultan�es limit�es par IP
-
-Acc�s VNC
-
-Authentification basique requise
-Certificat SSL obligatoire
-Acc�s localhost uniquement (via nginx)
-
-?? Services Docker
-Ports internes (localhost uniquement)
-
-3000 : Scraping Backend (Express)
-5678 : N8N Interface
-6080 : noVNC Web Interface
-5900 : VNC Server (scraping-backend)
-
-Volumes persistants
-
-project-n8n_n8n_data : Donn�es N8N (workflows, configurations)
-project-n8n_scraping-backend_data : Donn�es de scraping persistantes
-
-?? Projets externes
-L'infrastructure r�f�rence les projets dans /root/projects/ :
-/root/projects/
-+-- shared/                    # Services partag�s
-�   +-- scraping-backend/      # Backend de scraping r�utilisable
-�   +-- novnc/                # Interface VNC
-+-- internal/                  # Projets internes LaRefonte
-+-- external/                  # Projets clients
-?? D�ploiement initial
-Pr�requis
-bash# Docker et Docker Compose
-curl -sSL https://get.docker.com | sh
-sudo usermod -aG docker $USER
-
-# Nginx
-sudo apt update && sudo apt install nginx
-
-# Certbot pour SSL
-sudo apt install certbot python3-certbot-nginx
-Installation
-bash# Cloner l'infrastructure
-git clone https://github.com/La-Refonte/la-Refonte-infrastructure.git
+```bash
+# 1. Cloner avec submodules
+git clone --recursive https://github.com/La-Refonte/la-Refonte-infrastructure.git
 cd la-Refonte-infrastructure
 
-# Copier et configurer les variables d'environnement
+# 2. Configuration
 cp .env.example .env
-nano .env
+nano .env  # Adapter à votre environnement
 
-# G�n�rer les certificats SSL
-sudo certbot --nginx -d larefonte.store -d www.larefonte.store -d n8n.larefonte.store -d vnc.larefonte.store -d cercledesvoyages.larefonte.store
+# 3. Démarrer les services
+docker compose up -d
 
-# Cr�er l'authentification VNC
-sudo htpasswd -c /etc/nginx/.htpasswd votre_utilisateur
+# 4. Déployer nginx
+./scripts/deploy-nginx.sh
+```
 
-# D�ployer nginx
+### Sur Nouveau Serveur
+
+Voir [DEPLOYMENT.md](DEPLOYMENT.md) pour le guide complet de déploiement.
+
+## 🔧 Gestion des Services
+
+### Docker Services
+
+```bash
+# Démarrer tous les services
+docker compose up -d
+
+# Arrêter tous les services  
+docker compose down
+
+# Redémarrer un service spécifique
+docker compose restart n8n
+docker compose restart cercle-des-voyages-backend
+docker compose restart scraping-backend
+
+# Rebuilder après mise à jour submodule
+docker compose up -d --build cercle-des-voyages-backend
+```
+
+### Mise à Jour des Submodules
+
+```bash
+# Mettre à jour tous les submodules automatiquement
+./scripts/update-submodules.sh
+
+
+# Mettre à jour un submodule manuellement
+cd services/cercle-des-voyages
+git pull origin main
+cd ../..
+git add services/cercle-des-voyages
+git commit -m "Update cercle-des-voyages submodule"
+```
+
+### Backup Sécurisé Workflows N8N
+
+```bash
+# Backup automatique de tous les projets N8N vers GitHub
+./scripts/n8n-workflows-backup.sh
+
+# Backup d'un projet spécifique
+./scripts/n8n-workflows-backup.sh nom-du-projet
+
+# Backup avec message personnalisé
+./scripts/n8n-workflows-backup.sh nom-du-projet "Message custom"
+```
+
+### Déploiement Nginx
+
+```bash
+# Déploiement complet (recommandé)
 ./scripts/deploy-nginx.sh
 
-# D�marrer les services Docker
-docker compose up -d
-?? Workflow de d�veloppement
+# Options spécifiques  
+./scripts/deploy-nginx.sh test           # Test config seulement
+./scripts/deploy-nginx.sh frontend       # Frontends uniquement
+./scripts/deploy-nginx.sh rollback /path # Restaurer sauvegarde
+```
 
-Modifier les configurations dans leurs dossiers respectifs
-Tester localement si n�cessaire
-Commiter les changements :
-bashgit add .
-git commit -m "feat: am�lioration config nginx"
-git push origin main
+## 📊 Monitoring et Logs
 
-D�ployer sur le serveur :
-bash./scripts/deploy-nginx.sh
+### Logs Services
 
+```bash
+# Logs globaux
+docker compose logs -f
 
-?? D�pannage
-Services Docker
-bash# V�rifier l'�tat des services
+# Logs par service
+docker compose logs -f n8n
+docker compose logs -f cercle-des-voyages-backend
+docker compose logs -f scraping-backend
+
+# Logs nginx par service
+tail -f /var/log/nginx/n8n.access.log
+tail -f /var/log/nginx/cercledesvoyages.access.log
+```
+
+### Statut Infrastructure
+
+```bash
+# État des services Docker
+docker compose ps
+
+# Espace disque volumes
+docker system df
+
+# Test configurations nginx
+sudo nginx -t
+```
+
+## 🔐 Sécurité
+
+### SSL/HTTPS
+- Certificats Let's Encrypt automatiques
+- TLS 1.2/1.3 uniquement  
+- HSTS activé sur tous les sites
+- OCSP Stapling pour validation rapide
+
+### Headers de Sécurité
+- `X-Content-Type-Options: nosniff`
+- `X-XSS-Protection: 1; mode=block`
+- `Referrer-Policy: strict-origin-when-cross-origin`
+- CORS sécurisé avec whitelist domaines
+
+### Rate Limiting
+- API : 30 req/min
+- Général : 60 req/min
+- Connexions simultanées limitées par IP
+
+### Accès Services
+- Tous les ports bindés sur `127.0.0.1` uniquement
+- Accès externe via nginx reverse proxy SSL obligatoire
+- VNC avec authentification basique requise
+
+## 🛠️ Ports Internes
+
+**Services accessibles uniquement via nginx :**
+- `5678` : N8N Interface
+- `3001` : Cercle des Voyages Backend API  
+- `3000` : Scraping Backend
+- `6080` : noVNC Web Interface
+- `5900` : VNC Server (scraping-backend)
+
+## 🔄 Volumes Persistants
+
+- `project-n8n_n8n_data` : Données N8N (workflows, configurations)
+- `project-n8n_scraping-backend_data` : Données de scraping persistantes
+
+## 📚 Documentation
+
+- **[CLAUDE.md](CLAUDE.md)** : Guide développeur complet
+- **[DEPLOYMENT.md](DEPLOYMENT.md)** : Guide déploiement nouveau serveur
+- **[scripts/README.md](scripts/README.md)** : Documentation des scripts
+
+## 🆘 Dépannage
+
+### Problèmes Docker
+
+```bash
+# Vérifier l'état des services
 docker compose ps
 
 # Rebuilder un service
-docker compose up -d --build scraping-backend
+docker compose up -d --build cercle-des-voyages-backend
 
-# Logs d�taill�s
-docker compose logs -f --tail=100 n8n
-Nginx
-bash# Test de configuration
+# Nettoyer l'espace Docker
+docker system prune
+```
+
+### Problèmes Nginx
+
+```bash
+# Test de configuration
 sudo nginx -t
 
-# Statut du service
+# Statut du service  
 sudo systemctl status nginx
 
-# Red�marrage complet
+# Redémarrage complet
 sudo systemctl restart nginx
-Certificats SSL
-bash# V�rifier l'expiration
+```
+
+### Problèmes SSL
+
+```bash
+# Vérifier l'expiration
 sudo certbot certificates
 
 # Renouvellement manuel
@@ -190,29 +236,23 @@ sudo certbot renew
 
 # Test de renouvellement
 sudo certbot renew --dry-run
-?? Monitoring
-M�triques importantes
+```
 
-Uptime des services Docker
-Certificats SSL (expiration dans 30 jours)
-Espace disque volumes Docker
-Logs d'erreur nginx et applications
+## 🚀 Architecture Business
 
-Commandes utiles
-bash# Espace disque volumes
-docker system df
+Cette infrastructure est conçue pour la **modularité business** :
 
-# Nettoyage Docker
-docker system prune
+- **Projets vendables** : Chaque service dans `services/` peut être vendu séparément
+- **Submodules Git** : Facilite la maintenance et les updates
+- **Configuration portable** : Variables d'environnement pour adaptation serveur
+- **Scripts automatisés** : Déploiement et maintenance simplifiés
 
-# Taille des logs
-du -sh /var/log/nginx/
+## 📞 Support
 
-# Rotation des logs
-sudo logrotate -f /etc/logrotate.d/nginx
-?? Liens utiles
+- **GitHub** : https://github.com/La-Refonte/la-Refonte-infrastructure
+- **Documentation** : Voir fichiers CLAUDE.md et DEPLOYMENT.md
+- **Scripts** : Aide disponible avec `./scripts/nom-script.sh help`
 
-GitHub : https://github.com/La-Refonte/la-Refonte-infrastructure
-N8N Documentation : https://docs.n8n.io/
-Nginx Documentation : https://nginx.org/en/docs/
-Let's Encrypt : https://letsencrypt.org/
+---
+
+**Infrastructure professionnelle LaRefonte** - Modulaire, sécurisée et évolutive 🚀
