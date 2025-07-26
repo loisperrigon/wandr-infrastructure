@@ -1,81 +1,92 @@
-# Supprimer l'ancien
-rm update-n8n.sh
-
-# Créer le nouveau corrigé
-cat > update-n8n.sh << 'EOF'
 #!/bin/bash
-echo "Mise a jour n8n en cours..."
+
+# ===========================================
+# N8N Update Script - Template Version
+# ===========================================
+
+echo "=========================================="
+echo "  N8N Update Process"
+echo "  $(date)"
+echo "=========================================="
 
 # Variables
-BACKUP_DIR="/root/larefonte-infrastructure/backups"
+INFRASTRUCTURE_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
+BACKUP_DIR="$INFRASTRUCTURE_DIR/backups"
 BACKUP_FILE="n8n-backup-$(date +%Y%m%d-%H%M%S).tar.gz"
 
-# Creer le dossier de sauvegarde
-mkdir -p $BACKUP_DIR
-echo "Sauvegarde des donnees..."
+# Create backup directory
+mkdir -p "$BACKUP_DIR"
+echo "Creating backup..."
 
-# Arreter n8n
+# Stop n8n
+echo "Stopping N8N service..."
 if command -v docker-compose &> /dev/null; then
-    docker-compose stop n8n
+    docker-compose -f "$INFRASTRUCTURE_DIR/docker-compose.yml" stop n8n
 elif command -v docker &> /dev/null; then
-    docker compose stop n8n
+    docker compose -f "$INFRASTRUCTURE_DIR/docker-compose.yml" stop n8n
 else
-    echo "ERREUR: Docker Compose non trouve"
+    echo "ERROR: Docker Compose not found"
     exit 1
 fi
 
-# Sauvegarder les donnees (CORRIGÉ)
+# Backup data
+echo "Backing up N8N data..."
 docker run --rm \
-  -v project-n8n_n8n_data:/data \
-  -v $BACKUP_DIR:/backup \
-  alpine tar czf /backup/$BACKUP_FILE /data
+  -v n8n_data:/data \
+  -v "$BACKUP_DIR":/backup \
+  alpine tar czf "/backup/$BACKUP_FILE" /data
 
 if [ $? -eq 0 ]; then
-    echo "OK: Sauvegarde creee : $BACKUP_DIR/$BACKUP_FILE"
-    ls -lh $BACKUP_DIR/$BACKUP_FILE
+    echo "âœ“ Backup created: $BACKUP_DIR/$BACKUP_FILE"
+    ls -lh "$BACKUP_DIR/$BACKUP_FILE"
 else
-    echo "ERREUR: Erreur lors de la sauvegarde"
+    echo "ERROR: Backup failed"
     exit 1
 fi
 
-echo "Telechargement de la derniere image..."
+# Pull latest image
+echo "Downloading latest N8N image..."
 docker pull n8nio/n8n:latest
 
-echo "Redemarrage de n8n..."
+# Restart n8n
+echo "Starting N8N with new image..."
 if command -v docker-compose &> /dev/null; then
-    docker-compose up -d n8n
+    docker-compose -f "$INFRASTRUCTURE_DIR/docker-compose.yml" up -d n8n
 else
-    docker compose up -d n8n
+    docker compose -f "$INFRASTRUCTURE_DIR/docker-compose.yml" up -d n8n
 fi
 
-echo "Attente du demarrage..."
+echo "Waiting for N8N to start..."
 sleep 10
 
-# Verifier que n8n repond
+# Verify n8n is responding
 if curl -f -s http://127.0.0.1:5678 > /dev/null; then
-    echo "OK: n8n mis a jour avec succes !"
-    echo "Accessible sur : https://n8n.larefonte.store"
+    echo "âœ“ N8N updated successfully!"
+    echo "âœ“ Service is running on port 5678"
+    echo ""
+    echo "Please verify N8N is accessible through your configured domain"
 else
-    echo "ERREUR: Probleme detecte, restauration en cours..."
+    echo "ERROR: N8N not responding, attempting restore..."
     
     if command -v docker-compose &> /dev/null; then
-        docker-compose stop n8n
+        docker-compose -f "$INFRASTRUCTURE_DIR/docker-compose.yml" stop n8n
     else
-        docker compose stop n8n
+        docker compose -f "$INFRASTRUCTURE_DIR/docker-compose.yml" stop n8n
     fi
     
     docker run --rm \
-      -v project-n8n_n8n_data:/data \
-      -v $BACKUP_DIR:/backup \
+      -v n8n_data:/data \
+      -v "$BACKUP_DIR":/backup \
       alpine sh -c "cd /data && tar xzf /backup/$BACKUP_FILE --strip-components=1"
     
     if command -v docker-compose &> /dev/null; then
-        docker-compose up -d n8n
+        docker-compose -f "$INFRASTRUCTURE_DIR/docker-compose.yml" up -d n8n
     else
-        docker compose up -d n8n
+        docker compose -f "$INFRASTRUCTURE_DIR/docker-compose.yml" up -d n8n
     fi
-    echo "Restauration effectuee"
+    echo "Restore completed"
 fi
-EOF
 
-chmod +x update-n8n.sh
+echo ""
+echo "Update process finished"
+echo "Backup stored in: $BACKUP_DIR/$BACKUP_FILE"

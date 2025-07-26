@@ -9,7 +9,7 @@
 set -euo pipefail
 
 # === CONFIGURATION ===
-GITHUB_ORG="La-Refonte"
+GITHUB_ORG="${GITHUB_ORG:-client-org}"  # Use env var or default
 BACKUP_DIR="/root/n8n-backups"
 N8N_CONTAINER=""  # Auto-détecté plus bas
 DATE=$(date +"%Y%m%d_%H%M%S")
@@ -116,14 +116,17 @@ verify_token_security() {
         error "GITHUB_TOKEN not defined!"
         log "Create a .env file with:"
         log "GITHUB_TOKEN=ghp_xxxxxxxxxxxxxxxxxxxxx"
+        log "GITHUB_ORG=your-github-org"
+        log "CLIENT_DOMAIN=client-domain.com"
         log ""
         log "Possible locations:"
+        log "- $(dirname "$0")/../.env (recommended)"
         log "- $(dirname "$0")/.env"
         log "- /root/n8n-backups/.env"
         exit 1
     fi
     
-    # Test access to La-Refonte organization ONLY
+    # Test access to configured organization ONLY
     org_response=$(curl -s -H "Authorization: token $GITHUB_TOKEN" \
         "https://api.github.com/orgs/$GITHUB_ORG" 2>/dev/null)
     
@@ -131,7 +134,7 @@ verify_token_security() {
         success "Access to organization $GITHUB_ORG confirmed"
     else
         error "No access to organization $GITHUB_ORG!"
-        log "Verify that your token has access to La-Refonte organization"
+        log "Verify that your token has access to $GITHUB_ORG organization"
         exit 1
     fi
     
@@ -250,9 +253,9 @@ backup_project() {
         log "Initializing local Git repository..."
         git init
         git config user.name "N8N Backup Bot"
-        git config user.email "backup@larefonte.store"
+        git config user.email "backup@${CLIENT_DOMAIN:-example.com}"
         
-        # Configure GitHub remote ONLY to La-Refonte
+        # Configure GitHub remote to organization
         git remote add origin "git@github.com:$GITHUB_ORG/$repo_name.git"
         
         # Create secure .gitignore
@@ -313,7 +316,7 @@ EOF
 
 Automatic backup of N8N workflows for project **$project_name**.
 
-**SECURITY**: Private repository in La-Refonte organization only.
+**SECURITY**: Private repository in $GITHUB_ORG organization only.
 
 ## Last backup
 - **Date**: $(date +'%d/%m/%Y at %H:%M')
@@ -341,7 +344,7 @@ docker exec n8n_container n8n import:workflow --input=/path/to/workflow.json
 \`\`\`
 
 ## Security
-- Private repository in La-Refonte organization
+- Private repository in $GITHUB_ORG organization
 - Token with limited permissions
 - Automatic secure backup
 - Complete Git history of changes
@@ -382,7 +385,7 @@ $(git diff --staged --name-only | sed 's/^/- /')"
         git commit -m "$commit_msg"
         success "Commit created for '$project_name'"
         
-        # Push to GitHub (La-Refonte organization only)
+        # Push to GitHub (configured organization only)
         if git push origin main 2>/dev/null || git push origin master 2>/dev/null; then
             success "Project '$project_name' backed up to $GITHUB_ORG!"
         else
@@ -402,7 +405,7 @@ $(git diff --staged --name-only | sed 's/^/- /')"
 
 echo "=========================================="
 echo "  N8N Workflows Secure Backup to GitHub"
-echo "  LaRefonte Infrastructure - $(date)"
+echo "  $(date)"
 echo "=========================================="
 
 # Load environment variables

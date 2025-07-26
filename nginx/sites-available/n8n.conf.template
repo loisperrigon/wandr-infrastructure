@@ -1,0 +1,54 @@
+# ===========================================
+# N8N - Workflow Automation Template
+# Replace CLIENT_DOMAIN with actual client domain
+# ===========================================
+
+# HTTP to HTTPS redirect
+server {
+    listen 80;
+    server_name n8n.CLIENT_DOMAIN;
+    return 301 https://$host$request_uri;
+}
+
+# N8N Interface
+server {
+    listen 443 ssl http2;
+    server_name n8n.CLIENT_DOMAIN;
+
+    client_max_body_size 50M;
+    client_body_timeout 3600s;
+    client_header_timeout 300s;
+    send_timeout 3600s; 
+
+    # SSL configuration
+    include /etc/nginx/options-ssl-nginx.conf;
+
+    # Logs
+    access_log /var/log/nginx/n8n.access.log;
+    error_log /var/log/nginx/n8n.error.log;
+
+    # Security headers for N8N (allows iframe for workflows)
+    add_header X-Frame-Options SAMEORIGIN always;
+
+    # N8N on port 5678
+    location / {
+        proxy_pass http://localhost:5678;
+        proxy_set_header Host $host;
+        proxy_set_header X-Real-IP $remote_addr;
+        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+        proxy_set_header X-Forwarded-Proto $scheme;
+        
+        # WebSocket support for N8N
+        proxy_set_header Upgrade $http_upgrade;
+        proxy_set_header Connection "upgrade";
+        proxy_http_version 1.1;
+        
+        # N8N optimizations
+        proxy_buffering off;
+        proxy_cache off;
+        gzip off;
+        proxy_read_timeout 3600s;
+        proxy_connect_timeout 60s;
+        proxy_send_timeout 3600s;
+    }
+}

@@ -1,7 +1,7 @@
 #!/bin/bash
 
 # ===========================================
-# Script de d�ploiement Nginx LaRefonte
+# Script de d�ploiement Nginx Template
 # ===========================================
 
 set -e  # Arr�ter en cas d'erreur
@@ -82,9 +82,9 @@ check_prerequisites() {
         exit 1
     fi
     
-    # V�rifier les certificats SSL
-    if [ ! -f "/etc/letsencrypt/live/larefonte.store/fullchain.pem" ]; then
-        log_warning "Certificats SSL non trouv�s. Assurez-vous qu'ils sont g�n�r�s."
+    # V�rifier les certificats SSL (g�n�rique)
+    if [ ! -d "/etc/letsencrypt/live" ]; then
+        log_warning "R�pertoire certificats SSL non trouv�. Assurez-vous que Let's Encrypt est configur�."
     fi
     
     log_success "Pr�requis OK"
@@ -170,10 +170,7 @@ deploy_frontends() {
                 frontend_dir="$frontend_base"
                 frontend_name="$project_name"
                 
-                # Mapping spécifique pour les noms de projets
-                if [[ "$project_name" == "cercle-des-voyages" ]]; then
-                    frontend_name="Dashboard-Cercle-des-Voyages"
-                fi
+                # Utiliser le nom du projet tel quel (pas de mapping hardcodé)
                     
                     log_info "D�ploiement frontend: $frontend_name"
                     
@@ -365,7 +362,7 @@ deploy_specific_frontend() {
 main() {
     echo "=========================================="
     echo "  D�ploiement Infrastructure Nginx"
-    echo "  LaRefonte - $(date)"
+    echo "  $(date)"
     echo "=========================================="
     
     # V�rifications
@@ -386,12 +383,7 @@ main() {
         log_success "D�ploiement termin� avec succ�s !"
         
         echo ""
-        echo "?? Configuration active :"
-        echo "- LaRefonte Main : https://larefonte.store (Express port 3000)"
-        echo "- VNC Access     : https://vnc.larefonte.store (noVNC port 6080)"
-        echo "- N8N Workflows  : https://n8n.larefonte.store (N8N port 5678)"
-        echo "- Cercle Voyages : https://cercledesvoyages.larefonte.store (SPA + API port 3001)"
-        echo ""
+        echo "?? Configuration nginx d�ploy�e avec succ�s"
         echo "?? Frontends d�ploy�s dans /var/www/"
         echo "?? Logs disponibles dans /var/log/nginx/"
         echo "?? Sauvegarde dans : $BACKUP_DIR"
@@ -445,8 +437,8 @@ case "${1:-}" in
         echo "  frontend <nom>       : D�ploiement d'un frontend sp�cifique"
         echo ""
         echo "Exemples:"
-        echo "  $0 frontend                              # D�ploie tous les frontends"
-        echo "  $0 frontend Dashboard-Cercle-des-Voyages # D�ploie seulement ce frontend"
+        echo "  $0 frontend                # D�ploie tous les frontends"
+        echo "  $0 frontend client-project # D�ploie seulement ce frontend"
         exit 1
         ;;
 esac

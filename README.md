@@ -1,66 +1,95 @@
-# Infrastructure LaRefonte
+# Infrastructure Template
 
-Infrastructure complète et professionnelle pour l'écosystème LaRefonte avec nginx, Docker et architecture modulaire par submodules.
+Template d'infrastructure professionnelle pour déploiement client avec nginx, Docker et architecture modulaire.
 
-## 🚀 Services déployés
+## 🚀 Template Features
 
-✅ **Services opérationnels**
+✅ **Services inclus dans le template**
 
-- 🌐 **N8N Workflows** : https://n8n.larefonte.store (Automatisation)
-- 📊 **Cercle des Voyages** : https://cercledesvoyages.larefonte.store (Dashboard + API)
-- 🤖 **Scraping Tools** : Backend scraping + interface VNC
-- 🔒 **VNC Access** : https://vnc.larefonte.store (Accès distant sécurisé)
+- 🌐 **N8N Workflows** : Plateforme d'automatisation complète
+- 🔧 **Nginx Reverse Proxy** : SSL termination et sécurité
+- 🐳 **Docker Compose** : Orchestration modulaire des services
+- 📦 **Support Submodules** : Intégration facile des projets clients
 
-## 🏗️ Architecture Modulaire
+## 🏗️ Architecture Template
 
 ```
-larefonte-infrastructure/
-├── services/                           # Services par projet (submodules)
-│   ├── cercle-des-voyages/            # Submodule Dashboard complet
-│   │   ├── backend/                   # API Node.js + MongoDB
-│   │   ├── frontend/                  # Interface utilisateur modulaire
-│   │   └── Documentation/             # Docs projet
-│   └── scraping-tools/
-│       ├── backend/                   # Submodule backend scraping
-│       └── novnc/                     # Interface VNC web
-├── nginx/                             # Configuration nginx modulaire
-│   ├── sites-available/              # Configurations par service
-│   ├── ssl/                          # SSL centralisé
+infrastructure-template/
+├── services/                          # Services clients (à ajouter via submodules)
+│   └── [vos-projets-ici]/            # Ajoutez vos submodules clients
+├── nginx/                             # Configuration nginx
+│   ├── sites-available/              # Templates de configuration
+│   │   ├── n8n.conf.template         # Template N8N
+│   │   ├── backend-api.conf.template # Template API backend
+│   │   └── frontend-spa.conf.template # Template frontend SPA
+│   ├── ssl/                          # Configuration SSL
 │   └── conf.d/                       # Configuration générale
 ├── scripts/                          # Scripts d'automatisation
 │   ├── deploy-nginx.sh              # Déploiement automatisé
 │   ├── update-submodules.sh         # Mise à jour submodules
-│   ├── n8n-workflows-backup.sh      # Backup sécurisé workflows N8N vers GitHub
-│   └── backup-nginx.sh              # Sauvegarde nginx
-├── docker-compose.yml               # Orchestration services
+│   ├── n8n-workflows-backup.sh      # Backup workflows N8N
+│   └── update-n8n.sh                # Mise à jour N8N
+├── docker-compose.yml               # Template d'orchestration
+├── .env.example                     # Variables d'environnement
 ├── CLAUDE.md                        # Guide développeur
-├── DEPLOYMENT.md                    # Guide déploiement
-└── .env.example                     # Configuration portable
+└── README.md                        # Ce fichier
 ```
 
-## 🚀 Démarrage Rapide
+## 🚀 Démarrage Rapide Client
 
-### Installation Complète
+### 1. Copier le template
 
 ```bash
-# 1. Cloner avec submodules
-git clone --recursive https://github.com/La-Refonte/la-Refonte-infrastructure.git
-cd la-Refonte-infrastructure
-
-# 2. Configuration
-cp .env.example .env
-nano .env  # Adapter à votre environnement
-
-# 3. Démarrer les services
-docker compose up -d
-
-# 4. Déployer nginx
-./scripts/deploy-nginx.sh
+# Copier le template pour votre client
+cp -r infrastructure-template/ client-infrastructure/
+cd client-infrastructure/
 ```
 
-### Sur Nouveau Serveur
+### 2. Configuration initiale
 
-Voir [DEPLOYMENT.md](DEPLOYMENT.md) pour le guide complet de déploiement.
+```bash
+# Copier et configurer les variables
+cp .env.example .env
+nano .env  # Modifier avec domaine client, mots de passe, etc.
+```
+
+Variables principales à configurer :
+- `N8N_HOST` : Domaine N8N du client
+- `CLIENT_DOMAIN` : Domaine principal du client
+- `N8N_PASSWORD` : Mot de passe fort pour N8N
+- `SSL_EMAIL` : Email pour Let's Encrypt
+- `GITHUB_ORG` : Organisation GitHub (si backup N8N)
+
+### 3. Ajouter les services clients
+
+```bash
+# Ajouter vos projets comme submodules
+git submodule add https://github.com/client/backend-api.git services/client-backend
+git submodule add https://github.com/client/frontend-app.git services/client-frontend
+git submodule update --init --recursive
+```
+
+### 4. Configurer nginx
+
+```bash
+# Copier et adapter les templates nginx
+cp nginx/sites-available/backend-api.conf.template nginx/sites-available/client-api.conf
+# Éditer et remplacer SERVICE_NAME, CLIENT_DOMAIN, BACKEND_PORT
+```
+
+### 5. Adapter docker-compose.yml
+
+Décommenter et adapter les services nécessaires dans `docker-compose.yml`.
+
+### 6. Déployer
+
+```bash
+# Déployer la configuration nginx
+./scripts/deploy-nginx.sh
+
+# Démarrer les services
+docker compose up -d
+```
 
 ## 🔧 Gestion des Services
 
@@ -75,138 +104,99 @@ docker compose down
 
 # Redémarrer un service spécifique
 docker compose restart n8n
-docker compose restart cercle-des-voyages-backend
-docker compose restart scraping-backend
+docker compose restart client-backend
 
-# Rebuilder après mise à jour submodule
-docker compose up -d --build cercle-des-voyages-backend
+# Voir les logs
+docker compose logs -f n8n
+docker compose logs -f client-backend
 ```
 
-### Mise à Jour des Submodules
+### Mise à jour des submodules
 
 ```bash
-# Mettre à jour tous les submodules automatiquement
+# Mettre à jour tous les submodules
 ./scripts/update-submodules.sh
 
-
-# Mettre à jour un submodule manuellement
-cd services/cercle-des-voyages
+# Mettre à jour un submodule spécifique
+cd services/client-backend
 git pull origin main
 cd ../..
-git add services/cercle-des-voyages
-git commit -m "Update cercle-des-voyages submodule"
+git add services/client-backend
+git commit -m "Update client backend"
 ```
 
-### Backup Sécurisé Workflows N8N
+### Déploiement Frontend
 
 ```bash
-# Backup automatique de tous les projets N8N vers GitHub
-./scripts/n8n-workflows-backup.sh
+# Déployer tous les frontends
+./scripts/deploy-nginx.sh frontend
 
-# Backup d'un projet spécifique
-./scripts/n8n-workflows-backup.sh nom-du-projet
-
-# Backup avec message personnalisé
-./scripts/n8n-workflows-backup.sh nom-du-projet "Message custom"
+# Déployer un frontend spécifique
+./scripts/deploy-nginx.sh frontend client-project
 ```
 
-### Déploiement Nginx
+## 📊 Monitoring
+
+### Vérifier l'état des services
 
 ```bash
-# Déploiement complet (recommandé)
-./scripts/deploy-nginx.sh
-
-# Options spécifiques  
-./scripts/deploy-nginx.sh test           # Test config seulement
-./scripts/deploy-nginx.sh frontend       # Frontends uniquement
-./scripts/deploy-nginx.sh rollback /path # Restaurer sauvegarde
-```
-
-## 📊 Monitoring et Logs
-
-### Logs Services
-
-```bash
-# Logs globaux
-docker compose logs -f
-
-# Logs par service
-docker compose logs -f n8n
-docker compose logs -f cercle-des-voyages-backend
-docker compose logs -f scraping-backend
+# État des conteneurs Docker
+docker compose ps
 
 # Logs nginx par service
 tail -f /var/log/nginx/n8n.access.log
-tail -f /var/log/nginx/cercledesvoyages.access.log
-```
+tail -f /var/log/nginx/client.access.log
 
-### Statut Infrastructure
-
-```bash
-# État des services Docker
-docker compose ps
-
-# Espace disque volumes
-docker system df
-
-# Test configurations nginx
-sudo nginx -t
+# Utilisation des ressources
+docker stats
 ```
 
 ## 🔐 Sécurité
 
-### SSL/HTTPS
-- Certificats Let's Encrypt automatiques
-- TLS 1.2/1.3 uniquement  
-- HSTS activé sur tous les sites
-- OCSP Stapling pour validation rapide
+### Configuration SSL
 
-### Headers de Sécurité
-- `X-Content-Type-Options: nosniff`
-- `X-XSS-Protection: 1; mode=block`
-- `Referrer-Policy: strict-origin-when-cross-origin`
-- CORS sécurisé avec whitelist domaines
+Les certificats Let's Encrypt sont générés automatiquement pour chaque domaine configuré.
 
-### Rate Limiting
-- API : 30 req/min
-- Général : 60 req/min
-- Connexions simultanées limitées par IP
+```bash
+# Vérifier les certificats
+sudo certbot certificates
 
-### Accès Services
-- Tous les ports bindés sur `127.0.0.1` uniquement
-- Accès externe via nginx reverse proxy SSL obligatoire
-- VNC avec authentification basique requise
+# Renouvellement manuel
+sudo certbot renew
+```
 
-## 🛠️ Ports Internes
+### Sauvegarde N8N
 
-**Services accessibles uniquement via nginx :**
-- `5678` : N8N Interface
-- `3001` : Cercle des Voyages Backend API  
-- `3000` : Scraping Backend
-- `6080` : noVNC Web Interface
-- `5900` : VNC Server (scraping-backend)
+```bash
+# Configurer le backup GitHub (optionnel)
+# Ajouter GITHUB_TOKEN et GITHUB_ORG dans .env
 
-## 🔄 Volumes Persistants
+# Backup tous les workflows
+./scripts/n8n-workflows-backup.sh
 
-- `project-n8n_n8n_data` : Données N8N (workflows, configurations)
-- `project-n8n_scraping-backend_data` : Données de scraping persistantes
+# Backup un projet spécifique
+./scripts/n8n-workflows-backup.sh nom-projet
+```
+
+## 🛠️ Scripts Disponibles
+
+- **deploy-nginx.sh** : Déploiement complet nginx avec backup automatique
+- **update-submodules.sh** : Mise à jour intelligente des submodules
+- **n8n-workflows-backup.sh** : Backup sécurisé des workflows N8N vers GitHub
+- **update-n8n.sh** : Mise à jour de N8N avec backup automatique
 
 ## 📚 Documentation
 
-- **[CLAUDE.md](CLAUDE.md)** : Guide développeur complet
-- **[DEPLOYMENT.md](DEPLOYMENT.md)** : Guide déploiement nouveau serveur
-- **[scripts/README.md](scripts/README.md)** : Documentation des scripts
+- **[CLAUDE.md](CLAUDE.md)** : Guide complet pour le développement
+- **[.env.example](.env.example)** : Template des variables d'environnement
 
 ## 🆘 Dépannage
 
 ### Problèmes Docker
 
 ```bash
-# Vérifier l'état des services
-docker compose ps
-
-# Rebuilder un service
-docker compose up -d --build cercle-des-voyages-backend
+# Reconstruire un service
+docker compose up -d --build client-backend
 
 # Nettoyer l'espace Docker
 docker system prune
@@ -218,41 +208,19 @@ docker system prune
 # Test de configuration
 sudo nginx -t
 
-# Statut du service  
-sudo systemctl status nginx
-
 # Redémarrage complet
 sudo systemctl restart nginx
 ```
 
-### Problèmes SSL
+## 🚀 Architecture Client
 
-```bash
-# Vérifier l'expiration
-sudo certbot certificates
+Ce template est conçu pour être **réutilisable** pour chaque client :
 
-# Renouvellement manuel
-sudo certbot renew
-
-# Test de renouvellement
-sudo certbot renew --dry-run
-```
-
-## 🚀 Architecture Business
-
-Cette infrastructure est conçue pour la **modularité business** :
-
-- **Projets vendables** : Chaque service dans `services/` peut être vendu séparément
-- **Submodules Git** : Facilite la maintenance et les updates
-- **Configuration portable** : Variables d'environnement pour adaptation serveur
-- **Scripts automatisés** : Déploiement et maintenance simplifiés
-
-## 📞 Support
-
-- **GitHub** : https://github.com/La-Refonte/la-Refonte-infrastructure
-- **Documentation** : Voir fichiers CLAUDE.md et DEPLOYMENT.md
-- **Scripts** : Aide disponible avec `./scripts/nom-script.sh help`
+- **Template propre** : Aucun code spécifique hardcodé
+- **Submodules dynamiques** : Ajout facile des projets clients
+- **Configuration par environnement** : Tout dans `.env`
+- **Scripts automatisés** : Déploiement simplifié
 
 ---
 
-**Infrastructure professionnelle LaRefonte** - Modulaire, sécurisée et évolutive 🚀
+**Infrastructure Template** - Prêt pour déploiement client professionnel 🚀
