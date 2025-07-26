@@ -76,17 +76,34 @@ docker stats
 ```
 
 ### Adding Client Services
-```bash
-# 1. Create service directory
-mkdir -p services/client-project/{backend,frontend}
 
-# 2. Add service to docker-compose.yml (uncomment and adapt template)
-# 3. Create nginx configuration
+#### Option 1: Ajouter submodule client existant
+```bash
+# 1. Ajouter le projet client comme submodule
+git submodule add https://github.com/client/project-repo.git services/client-project
+
+# 2. Initialiser le submodule
+git submodule update --init --recursive
+
+# 3. Adapter docker-compose.yml pour ce projet
+# 4. Créer la configuration nginx
 cp nginx/sites-available/template.conf nginx/sites-available/client.conf
 
-# 4. Deploy
+# 5. Déployer
 ./scripts/deploy-nginx.sh
 docker compose up -d --build
+```
+
+#### Option 2: Créer nouveau service client
+```bash
+# 1. Créer structure service
+mkdir -p services/client-project/{backend,frontend}
+
+# 2. Développer le service
+# 3. En faire un repo Git séparé si besoin
+# 4. Optionnellement l'ajouter comme submodule
+
+# 5. Adapter docker-compose.yml et déployer
 ```
 
 ### N8N Workflows Secure Backup
@@ -225,10 +242,14 @@ cd client-name-infrastructure
 cp .env.example .env
 nano .env  # Set client domain, credentials
 
-# 3. Add client services
-# Edit docker-compose.yml to uncomment needed services
+# 3. Add client services (submodules dynamiques)
+git submodule add https://github.com/client/backend-repo.git services/client-backend
+git submodule add https://github.com/client/frontend-repo.git services/client-frontend
+git submodule update --init --recursive
 
-# 4. Deploy
+# 4. Edit docker-compose.yml to uncomment needed services
+
+# 5. Deploy
 ./scripts/deploy-nginx.sh
 docker compose up -d
 ```
@@ -242,10 +263,11 @@ docker compose up -d
 4. For backend changes: `docker compose up -d --build client-service`
 
 ### Adding New Client Service
-1. Create service directory: `mkdir -p services/new-service/{backend,frontend}`
-2. Add service definition to `docker-compose.yml`
-3. Create nginx config: `cp nginx/sites-available/template.conf nginx/sites-available/new-service.conf`
-4. Deploy: `./scripts/deploy-nginx.sh`
+1. Add as submodule: `git submodule add https://github.com/client/service-repo.git services/new-service`
+2. Initialize: `git submodule update --init --recursive`
+3. Add service definition to `docker-compose.yml`
+4. Create nginx config: `cp nginx/sites-available/template.conf nginx/sites-available/new-service.conf`
+5. Deploy: `./scripts/deploy-nginx.sh`
 
 ### Template Maintenance
 1. Update base template when needed
@@ -339,6 +361,39 @@ The infrastructure includes automatic backup and rollback functionality for safe
 
 1. **Copy template**: `cp -r template/ client-project/`
 2. **Configure environment**: `cp .env.example .env && nano .env`
-3. **Add client services**: Edit `docker-compose.yml`
-4. **Deploy**: `./scripts/deploy-nginx.sh && docker compose up -d`
-5. **Test and verify**: `docker compose ps` and check service logs
+3. **Add client submodules**: `git submodule add https://github.com/client/repo.git services/client-service`
+4. **Initialize submodules**: `git submodule update --init --recursive`
+5. **Configure services**: Edit `docker-compose.yml`
+6. **Deploy**: `./scripts/deploy-nginx.sh && docker compose up -d`
+7. **Test and verify**: `docker compose ps` and check service logs
+
+## Gestion des Submodules Client
+
+### Ajout de submodules dynamiques
+```bash
+# Ajouter un projet client existant
+git submodule add https://github.com/client/backend-api.git services/client-backend
+git submodule add https://github.com/client/react-frontend.git services/client-frontend
+
+# Initialiser tous les submodules
+git submodule update --init --recursive
+```
+
+### Mise à jour des submodules client
+```bash
+# Mettre à jour tous les submodules
+./scripts/update-submodules.sh
+
+# Ou manuellement un submodule spécifique
+cd services/client-backend
+git pull origin main
+cd ../..
+git add services/client-backend
+git commit -m "Update client backend"
+```
+
+### Important pour les clients
+- **Template clean** : Le template n'a aucun submodule fixe
+- **Submodules dynamiques** : Ajoutés uniquement selon besoins client
+- **Flexibilité totale** : Chaque client peut avoir ses propres repos
+- **Indépendance** : Chaque déploiement client est autonome
