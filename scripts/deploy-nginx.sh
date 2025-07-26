@@ -161,6 +161,12 @@ deploy_frontends() {
                     # Extraire le nom du frontend
                     frontend_name=$(basename "$frontend_dir")
                     
+                    # Mapping spécifique pour les projets connus
+                    if [[ "$project_name" == "cercle-des-voyages" && "$frontend_name" == "assets" ]]; then
+                        frontend_name="Dashboard-Cercle-des-Voyages"
+                        log_info "Mapping spécial: assets -> Dashboard-Cercle-des-Voyages"
+                    fi
+                    
                     log_info "D�ploiement frontend: $frontend_name"
                     
                     # V�rifier et pr�parer le build si n�cessaire
