@@ -4,53 +4,57 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Project Overview
 
-This is the LaRefonte infrastructure repository - a complete professional infrastructure for the LaRefonte ecosystem using nginx, Docker, and modular architecture with Git submodules. It hosts multiple services:
+This is the **LaRefonte Infrastructure Template** - a ready-to-deploy professional infrastructure template for client projects using nginx, Docker, and modular architecture. This template provides:
 
-- **N8N Workflows**: https://n8n.larefonte.store (automation platform)
-- **Cercle des Voyages**: https://cercledesvoyages.larefonte.store (analytics dashboard + API)
-- **Scraping Tools**: Backend scraping + VNC interface
-- **VNC Access**: https://vnc.larefonte.store (remote access)
+- **N8N Automation Platform**: Workflow automation for any client domain
+- **Nginx Reverse Proxy**: SSL termination and security headers
+- **Docker Services**: Modular architecture for client-specific services
+- **Template Structure**: Ready for customization per client needs
 
 ## Architecture
 
-The infrastructure uses a modular approach with Git submodules for business scalability:
+Template infrastructure for client deployment with modular services:
 
 ```
-├── services/                           # Business-oriented project modules
-│   ├── cercle-des-voyages/             # Complete Dashboard project (submodule)
-│   │   ├── backend/                    # Node.js API + MongoDB + Dockerfile
-│   │   ├── frontend/                   # Modular vanilla JavaScript interface
-│   │   └── Documentation/              # Project-specific documentation
-│   └── scraping-tools/
-│       ├── backend/                    # Scraping backend (submodule)
-│       └── novnc/                     # VNC web interface
-├── nginx/                             # Modular nginx configuration
+├── services/                           # Client-specific services (to be added)
+│   └── [client-project]/              # Add client services here
+│       ├── backend/                    # Backend API + Database
+│       ├── frontend/                   # Frontend application
+│       └── docs/                       # Project documentation
+├── nginx/                             # Nginx reverse proxy configuration
 │   ├── sites-available/              # Service-specific configurations
-│   ├── ssl/                          # Centralized SSL configuration
-│   └── conf.d/                       # General configuration (security headers, rate limiting)
-├── scripts/                          # Automation scripts
-│   ├── deploy-nginx.sh              # Automated deployment with backup/rollback
-│   ├── update-submodules.sh         # Intelligent submodule updates
-│   ├── n8n-workflows-backup.sh      # Secure N8N workflows backup to GitHub
+│   ├── ssl/                          # SSL configuration template
+│   └── conf.d/                       # Security headers, rate limiting
+├── scripts/                          # Deployment automation scripts
+│   ├── deploy-nginx.sh              # Automated deployment with backup
+│   ├── n8n-workflows-backup.sh      # N8N backup to GitHub
 │   └── backup-nginx.sh              # Manual nginx backup
-└── docker-compose.yml               # Service orchestration
+├── docker-compose.yml               # Service orchestration template
+├── .env.example                     # Environment variables template
+└── CLAUDE.md                        # Development guide
 ```
 
 ## Common Commands
 
-### Environment Setup
+### Client Setup (First Time)
 ```bash
-# Initial setup (required once)
+# 1. Copy environment template
 cp .env.example .env
-# Edit .env with your configuration values
 
-# Verify all services are running
-docker compose ps
+# 2. Configure client-specific variables
+nano .env  # Edit with client domain, passwords, API keys
+
+# 3. Start base infrastructure (N8N only initially)
+docker compose up -d n8n
+
+# 4. Add client services to docker-compose.yml as needed
+# 5. Deploy nginx configuration
+./scripts/deploy-nginx.sh
 ```
 
 ### Docker Services Management
 ```bash
-# Start all services
+# Start all configured services
 docker compose up -d
 
 # Stop all services
@@ -58,39 +62,31 @@ docker compose down
 
 # Restart specific service
 docker compose restart n8n
-docker compose restart cercle-des-voyages-backend
-docker compose restart scraping-backend
+docker compose restart [client-service-name]
 
-# Rebuild after submodule updates
-docker compose up -d --build cercle-des-voyages-backend
+# Rebuild after code changes
+docker compose up -d --build [service-name]
 
 # View logs
 docker compose logs -f n8n
-docker compose logs -f cercle-des-voyages-backend
-docker compose logs scraping-backend
+docker compose logs -f [client-service]
 
 # Check resource usage
 docker stats
 ```
 
-### Submodule Management (IMPORTANT)
+### Adding Client Services
 ```bash
-# Update all submodules automatically (recommended)
-./scripts/update-submodules.sh
+# 1. Create service directory
+mkdir -p services/client-project/{backend,frontend}
 
+# 2. Add service to docker-compose.yml (uncomment and adapt template)
+# 3. Create nginx configuration
+cp nginx/sites-available/template.conf nginx/sites-available/client.conf
 
-# Manual submodule update
-cd services/cercle-des-voyages
-git pull origin main
-cd ../..
-git add services/cercle-des-voyages
-git commit -m "Update cercle-des-voyages submodule"
-
-# Initial clone with submodules
-git clone --recursive https://github.com/La-Refonte/la-Refonte-infrastructure.git
-
-# If you forgot --recursive, initialize submodules
-git submodule update --init --recursive
+# 4. Deploy
+./scripts/deploy-nginx.sh
+docker compose up -d --build
 ```
 
 ### N8N Workflows Secure Backup
@@ -131,11 +127,10 @@ git submodule update --init --recursive
 
 ### Frontend Development
 ```bash
-# Dashboard Cercle des Voyages (currently HTML static)
-cd services/cercle-des-voyages/frontend
+# Client frontend development workflow
+cd services/client-project/frontend
 npm install
-npm run dev      # Development server on port 8080
-npm start        # Production server on port 8081
+npm run dev      # Development server (varies by framework)
 
 # Deploy frontend changes
 ./scripts/deploy-nginx.sh frontend
@@ -144,14 +139,14 @@ npm start        # Production server on port 8081
 # - HTML/CSS/JS static files → copies directly from services/project/frontend/
 # - React/Vue projects with dist/ or build/ → copies build output
 
-# For future React/Vue projects:
-cd services/project/frontend
+# For React/Vue projects:
+cd services/client-project/frontend
 npm run build    # Generate dist/ or build/
 cd ../../..
 ./scripts/deploy-nginx.sh  # Auto-detects and deploys build output
 
 # Deploy specific frontend only
-./scripts/deploy-nginx.sh frontend dashboard
+./scripts/deploy-nginx.sh frontend client-project
 ```
 
 ### Service Monitoring
@@ -170,31 +165,36 @@ docker stats
 
 ## Key Service Ports (Internal)
 
-- **5678**: N8N Interface  
-- **3001**: Cercle des Voyages Backend API
-- **3000**: Scraping Backend (Express)
-- **6080**: noVNC Web Interface
-- **5900**: VNC Server (scraping-backend)
+**Standard Template Ports:**
+- **5678**: N8N Interface (standard for all clients)
 
-All services are accessible only via nginx reverse proxy with SSL termination.
+**Client-Configurable Ports:**
+- **3001**: Primary backend API (adapt per client)
+- **3000**: Secondary services (scraping, etc.)
+- **8080**: Frontend development servers
 
-## Frontend Architecture
+All services bind to `127.0.0.1` only and are accessible via nginx reverse proxy with SSL termination.
 
-### Dashboard Cercle des Voyages
-Uses modular vanilla JavaScript architecture:
-- `config.js`: Global configuration and API URLs
-- `services/api.js`: WordPress and backend API communication
-- `components/ui.js`: UI managers (Connection, Loading, Table, Filter, Notification)
-- `utils/helpers.js`: Reusable utility functions
-- `app.js`: Main application orchestration
+## Frontend Architecture Template
 
-Frontend communicates with:
-- Backend API: https://cercledesvoyages.larefonte.store/api
-- WordPress: https://www.cercledesvoyages.com
+### Recommended Client Frontend Structure
+```
+services/client-project/frontend/
+├── src/                               # Source code
+├── public/                            # Static assets
+├── package.json                       # Dependencies and scripts
+├── vite.config.js / webpack.config.js # Build configuration
+└── dist/ or build/                    # Build output (generated)
+```
+
+### Supported Frontend Types
+1. **Static HTML/CSS/JS**: Direct deployment from `frontend/` folder
+2. **React/Vue/Svelte**: Build-based deployment from `dist/` or `build/`
+3. **Node.js SSR**: Custom Docker service with build process
 
 **Deploy script automatically detects:**
-- Static HTML/CSS/JS → copies `services/project/frontend/` to `/var/www/`
-- React/Vue projects → copies `services/project/frontend/dist/` or `build/` to `/var/www/`
+- Static files → copies `services/project/frontend/` to `/var/www/`
+- Build projects → copies `services/project/frontend/dist/` or `build/` to `/var/www/`
 
 ## Security Features
 
@@ -208,47 +208,69 @@ Frontend communicates with:
 
 ## Business Architecture
 
-The infrastructure is designed for **modular business sales**:
+This template is designed for **client deployment scalability**:
 
-- **Each service in `services/` is a separate sellable project**
-- **Git submodules** allow independent development and versioning
-- **Client-specific infrastructure** can reference only needed submodules
-- **Portable configuration** via environment variables
+- **Template-based approach**: Copy template, customize per client
+- **Environment-driven configuration**: All client-specific settings in `.env`
+- **Modular services**: Add only needed services to `docker-compose.yml`
+- **Portable deployment**: Works on any server with Docker
 
-Example: Selling only Dashboard to a client:
+### Client Deployment Workflow:
 ```bash
-mkdir client-infrastructure
-cd client-infrastructure
-git submodule add https://github.com/La-Refonte/Dashboard-Cercle-des-Voyages.git services/cercle-des-voyages
-# Custom docker-compose.yml with only needed services
+# 1. Copy template for new client
+cp -r larefonte-infrastructure-template client-name-infrastructure
+cd client-name-infrastructure
+
+# 2. Configure for client
+cp .env.example .env
+nano .env  # Set client domain, credentials
+
+# 3. Add client services
+# Edit docker-compose.yml to uncomment needed services
+
+# 4. Deploy
+./scripts/deploy-nginx.sh
+docker compose up -d
 ```
 
 ## Development Workflow
 
-### Regular Development
-1. Modify code in submodule: `cd services/cercle-des-voyages && git pull`
+### Client Project Development
+1. Modify client code in `services/client-project/`
 2. Test locally if necessary
-3. Deploy: `./scripts/deploy-nginx.sh`
-4. Rebuild Docker if needed: `docker compose up -d --build`
+3. For frontend changes: `./scripts/deploy-nginx.sh frontend`
+4. For backend changes: `docker compose up -d --build client-service`
 
-### Submodule Updates
-1. Update all submodules: `./scripts/update-submodules.sh`
-2. Script automatically handles conflicts and proposes commits
-3. Deploy changes: `./scripts/deploy-nginx.sh`
-
-### New Project Addition
-1. Create new submodule: `git submodule add <repo-url> services/new-project`
-2. Add service to `docker-compose.yml`
-3. Create nginx config in `nginx/sites-available/`
+### Adding New Client Service
+1. Create service directory: `mkdir -p services/new-service/{backend,frontend}`
+2. Add service definition to `docker-compose.yml`
+3. Create nginx config: `cp nginx/sites-available/template.conf nginx/sites-available/new-service.conf`
 4. Deploy: `./scripts/deploy-nginx.sh`
+
+### Template Maintenance
+1. Update base template when needed
+2. Test with sample client configuration
+3. Update documentation for new features
+4. Version template for client deployments
 
 ## Volume Management
 
-Persistent data is stored in Docker volumes:
-- `project-n8n_n8n_data`: N8N workflows and configurations
-- `project-n8n_scraping-backend_data`: Scraping data storage
+### Template Volumes
+- `n8n_data`: N8N workflows and configurations (standard for all clients)
+- Client volumes: Add as needed in `docker-compose.yml`
 
-**IMPORTANT**: Volume names are preserved from original setup to prevent data loss during infrastructure updates.
+### Client-Specific Volumes
+```yaml
+volumes:
+  n8n_data:
+    driver: local
+  client_database:
+    driver: local
+  client_uploads:
+    driver: local
+```
+
+Volumes persist data across container restarts and updates.
 
 ## SSL Certificate Management
 
@@ -289,35 +311,34 @@ docker system prune
 docker stats
 ```
 
-### Submodule Issues
+### Client Service Issues
 ```bash
-# Fix submodule in detached HEAD state
-cd services/problematic-submodule
-git checkout main
-git pull origin main
+# Rebuild specific client service
+docker compose up -d --build client-service
 
-# Reset submodule completely
-git submodule deinit -f services/problematic-submodule
-git submodule update --init services/problematic-submodule
+# Reset client service completely
+docker compose down client-service
+docker volume rm client_service_data  # If needed
+docker compose up -d --build client-service
 ```
 
-## Important Notes for Development
+## Important Notes for Template Usage
 
-1. **Always use submodule update script**: `./scripts/update-submodules.sh` handles edge cases
-2. **Frontend deploy script is intelligent**: Detects static vs build-based projects automatically
-3. **Nginx deployment includes automatic backup**: Safe to deploy, can rollback if issues
-4. **Volume names are preserved**: No risk of data loss during infrastructure updates
+1. **Template-first approach**: Copy entire template for each client
+2. **Environment-driven**: All client settings in `.env` file
+3. **Frontend deploy script is intelligent**: Detects static vs build-based projects automatically
+4. **Nginx deployment includes automatic backup**: Safe to deploy, can rollback if issues
 5. **Standard directory names**: Use `frontend/` and `backend/` for consistency
-6. **Business modular**: Each `services/` directory should be independently sellable
+6. **Service modularity**: Add only needed services to `docker-compose.yml`
 7. **Environment configuration**: Always copy `.env.example` to `.env` and configure before first run
 8. **Service isolation**: All services bind to `127.0.0.1` only, external access via nginx reverse proxy
 
 The infrastructure includes automatic backup and rollback functionality for safe configuration updates.
 
-## Quick Development Workflow
+## Quick Client Setup Workflow
 
-1. **Update submodules**: `./scripts/update-submodules.sh`
-2. **Make changes** in service directories
-3. **For backend changes**: `docker compose up -d --build [service-name]`
-4. **For frontend changes**: `./scripts/deploy-nginx.sh frontend`
+1. **Copy template**: `cp -r template/ client-project/`
+2. **Configure environment**: `cp .env.example .env && nano .env`
+3. **Add client services**: Edit `docker-compose.yml`
+4. **Deploy**: `./scripts/deploy-nginx.sh && docker compose up -d`
 5. **Test and verify**: `docker compose ps` and check service logs

@@ -17,7 +17,8 @@
       "Bash(dos2unix:*)",
       "WebFetch(domain:docs.n8n.io)",
       "Bash(git remote:*)",
-      "Bash(git add:*)"
+      "Bash(git add:*)",
+      "Bash(git commit:*)"
     ],
     "deny": []
   }

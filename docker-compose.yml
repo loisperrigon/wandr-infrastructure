@@ -1,19 +1,28 @@
+# ===========================================
+# Docker Compose Template Infrastructure
+# ===========================================
+# Template d'infrastructure pour clients LaRefonte
+# Modifiez les services selon les besoins du projet client
+
 services:
+  # ========================================
+  # N8N Automation Platform (Standard)
+  # ========================================
   n8n:
     image: n8nio/n8n:latest
     restart: always
     ports:
       - "127.0.0.1:5678:5678"
     environment:
-      N8N_HOST: ${N8N_HOST:-n8n.larefonte.store}
-      WEBHOOK_URL: https://${N8N_HOST:-n8n.larefonte.store}/
-      WEBHOOK_TUNNEL_URL: https://${N8N_HOST:-n8n.larefonte.store}/
-      VUE_APP_URL_BASE_API: https://${N8N_HOST:-n8n.larefonte.store}/
+      N8N_HOST: ${N8N_HOST:-n8n.example.com}
+      WEBHOOK_URL: https://${N8N_HOST:-n8n.example.com}/
+      WEBHOOK_TUNNEL_URL: https://${N8N_HOST:-n8n.example.com}/
+      VUE_APP_URL_BASE_API: https://${N8N_HOST:-n8n.example.com}/
       N8N_PORT: 5678
       N8N_PROTOCOL: https
       GENERIC_TIMEZONE: Europe/Paris
       N8N_BASIC_AUTH_ACTIVE: "true"
-      N8N_BASIC_AUTH_USER: admin
+      N8N_BASIC_AUTH_USER: ${N8N_USER:-admin}
       N8N_BASIC_AUTH_PASSWORD: ${N8N_PASSWORD}
       N8N_PUSH_BACKEND: websocket
       N8N_SECURE_COOKIE: "true"
@@ -25,65 +34,57 @@ services:
       N8N_EXECUTION_TIMEOUT_MAX: 7200
       EXECUTIONS_TIMEOUT: 3600
       EXECUTIONS_TIMEOUT_MAX: 7200
-      MCP_OPENAPI_MCP_HEADERS: '{"Authorization": "Bearer ${NOTION_API_TOKEN}", "Notion-Version": "2022-06-28"}'
     env_file:
       - .env
     volumes:
       - n8n_data:/home/node/.n8n
 
-  scraping-backend:
-    build:
-      context: ./services/scraping-tools/backend/
-      dockerfile: Dockerfile
-    restart: always
-    ports:
-      - "127.0.0.1:3000:3000"
-      - "127.0.0.1:5900:5900"
-    environment:
-      GOOGLE_CONTACT_PASSWORD: ${GOOGLE_CONTACT_PASSWORD}
-      RANKERFOX_PASSWORD: ${RANKERFOX_PASSWORD}
-      NODE_ENV: production
-      PUPPETEER_EXECUTABLE_PATH: /usr/bin/chromium
-      PUPPETEER_SKIP_CHROMIUM_DOWNLOAD: "true"
-      DATA_DIR: /usr/src/app/dist/data/navigators
-    working_dir: /usr/src/app
-    env_file:
-      - .env
-    volumes:
-      - scraping_data:/usr/src/app/dist/data/navigators
-
-  novnc:
-    build:
-      context: ./services/scraping-tools/novnc/
-      dockerfile: Dockerfile
-    platform: linux/arm64
-    container_name: novnc
-    restart: always
-    ports:
-      - "127.0.0.1:6080:6080"
-    environment:
-      - DISPLAY_WIDTH=1600
-      - DISPLAY_HEIGHT=900
-      - DISPLAY_DEPTH=24
-      - VNC_SERVER=scraping-backend:5900
-    depends_on:
-      - scraping-backend
-
-  cercle-des-voyages-backend:
-    build:
-      context: ./services/cercle-des-voyages/backend/
-      dockerfile: Dockerfile
-    restart: always
-    ports:
-      - "127.0.0.1:3001:3001"
-    env_file:
-      - .env  # Variables globales
-      - ./services/cercle-des-voyages/backend/.env  # Variables spécifiques
+  # ========================================
+  # Example Services (à adapter par client)
+  # ========================================
+  
+  # Exemple: Service Backend personnalisé
+  # Uncomment and adapt for client projects
+  # client-backend:
+  #   build:
+  #     context: ./services/client-project/backend/
+  #     dockerfile: Dockerfile
+  #   restart: always
+  #   ports:
+  #     - "127.0.0.1:3001:3001"
+  #   environment:
+  #     NODE_ENV: production
+  #     DATABASE_URL: ${DATABASE_URL}
+  #   env_file:
+  #     - .env
+  #   volumes:
+  #     - client_data:/app/data
+  
+  # Exemple: Service de scraping (optionnel)
+  # scraping-service:
+  #   build:
+  #     context: ./services/scraping/
+  #     dockerfile: Dockerfile
+  #   restart: always
+  #   ports:
+  #     - "127.0.0.1:3000:3000"
+  #     - "127.0.0.1:5900:5900"
+  #   environment:
+  #     NODE_ENV: production
+  #     PUPPETEER_EXECUTABLE_PATH: /usr/bin/chromium
+  #     PUPPETEER_SKIP_CHROMIUM_DOWNLOAD: "true"
+  #   env_file:
+  #     - .env
+  #   volumes:
+  #     - scraping_data:/app/data
 
 volumes:
+  # N8N Data (standard pour tous les clients)
   n8n_data:
-    external: true
-    name: project-n8n_n8n_data
-  scraping_data:
-    external: true
-    name: project-n8n_scraping-backend_data
+    driver: local
+  
+  # Exemples de volumes pour services clients
+  # client_data:
+  #   driver: local
+  # scraping_data:
+  #   driver: local
