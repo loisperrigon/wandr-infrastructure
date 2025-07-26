@@ -27,7 +27,6 @@ Template infrastructure for client deployment with modular services:
 │   └── conf.d/                       # Security headers, rate limiting
 ├── scripts/                          # Utility scripts
 │   ├── deploy-nginx.sh              # Nginx deployment
-│   ├── update-submodules.sh         # Submodule management
 │   ├── backup-docker-volumes.sh     # Volume backup
 │   └── restore-docker-volume.sh     # Volume restore
 ├── examples/                         # Configuration examples
@@ -388,7 +387,7 @@ git submodule update --init --recursive
 ### Mise à jour des submodules client
 ```bash
 # Mettre à jour tous les submodules
-./scripts/update-submodules.sh
+git submodule update --remote --merge
 
 # Ou manuellement un submodule spécifique
 cd services/client-backend

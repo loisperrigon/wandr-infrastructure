@@ -23,7 +23,6 @@ infrastructure-template/
 │   └── conf.d/                       # Configuration générale
 ├── scripts/                          # Scripts utilitaires
 │   ├── deploy-nginx.sh              # Déploiement nginx
-│   ├── update-submodules.sh         # Gestion submodules
 │   ├── backup-docker-volumes.sh     # Backup volumes
 │   └── restore-docker-volume.sh     # Restore volumes
 ├── examples/                         # Exemples de configuration
@@ -118,7 +117,7 @@ docker compose logs -f client-backend
 
 ```bash
 # Mettre à jour tous les submodules
-./scripts/update-submodules.sh
+git submodule update --remote --merge
 
 # Mettre à jour un submodule spécifique
 cd services/client-backend
@@ -181,7 +180,6 @@ sudo certbot renew
 ## 🛠️ Scripts Disponibles
 
 - **deploy-nginx.sh** : Déploiement nginx avec backup automatique
-- **update-submodules.sh** : Mise à jour intelligente des submodules
 - **backup-docker-volumes.sh** : Backup générique de volumes Docker
 - **restore-docker-volume.sh** : Restauration de volumes Docker
 
