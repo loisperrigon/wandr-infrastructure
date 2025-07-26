@@ -18,17 +18,17 @@ infrastructure-template/
 ├── services/                          # Services clients (à ajouter via submodules)
 │   └── [vos-projets-ici]/            # Ajoutez vos submodules clients
 ├── nginx/                             # Configuration nginx
-│   ├── sites-available/              # Templates de configuration
-│   │   ├── n8n.conf.template         # Template N8N
-│   │   ├── backend-api.conf.template # Template API backend
-│   │   └── frontend-spa.conf.template # Template frontend SPA
+│   ├── sites-available/              # Vos configurations (vide)
 │   ├── ssl/                          # Configuration SSL
 │   └── conf.d/                       # Configuration générale
-├── scripts/                          # Scripts d'automatisation
-│   ├── deploy-nginx.sh              # Déploiement automatisé
-│   ├── update-submodules.sh         # Mise à jour submodules
-│   ├── n8n-workflows-backup.sh      # Backup workflows N8N
-│   └── update-n8n.sh                # Mise à jour N8N
+├── scripts/                          # Scripts utilitaires
+│   ├── deploy-nginx.sh              # Déploiement nginx
+│   ├── update-submodules.sh         # Gestion submodules
+│   ├── backup-docker-volumes.sh     # Backup volumes
+│   └── restore-docker-volume.sh     # Restore volumes
+├── examples/                         # Exemples de configuration
+│   ├── docker-compose.examples.yml  # Services Docker exemples
+│   └── nginx-templates/             # Templates nginx
 ├── docker-compose.yml               # Template d'orchestration
 ├── .env.example                     # Variables d'environnement
 ├── CLAUDE.md                        # Guide développeur
@@ -72,14 +72,17 @@ git submodule update --init --recursive
 ### 4. Configurer nginx
 
 ```bash
-# Copier et adapter les templates nginx
-cp nginx/sites-available/backend-api.conf.template nginx/sites-available/client-api.conf
+# Copier les templates depuis examples
+cp examples/nginx-templates/backend-api.conf.template nginx/sites-available/client-api.conf
 # Éditer et remplacer SERVICE_NAME, CLIENT_DOMAIN, BACKEND_PORT
 ```
 
 ### 5. Adapter docker-compose.yml
 
-Décommenter et adapter les services nécessaires dans `docker-compose.yml`.
+```bash
+# Copier les services nécessaires depuis examples
+# Voir examples/docker-compose.examples.yml
+```
 
 ### 6. Déployer
 
@@ -165,25 +168,22 @@ sudo certbot certificates
 sudo certbot renew
 ```
 
-### Sauvegarde N8N
+### Sauvegarde Volumes Docker
 
 ```bash
-# Configurer le backup GitHub (optionnel)
-# Ajouter GITHUB_TOKEN et GITHUB_ORG dans .env
+# Backup d'un volume spécifique
+./scripts/backup-docker-volumes.sh mongo_data
 
-# Backup tous les workflows
-./scripts/n8n-workflows-backup.sh
-
-# Backup un projet spécifique
-./scripts/n8n-workflows-backup.sh nom-projet
+# Restaurer un volume
+./scripts/restore-docker-volume.sh backups/mongo_data_20240126_143022.tar.gz mongo_data
 ```
 
 ## 🛠️ Scripts Disponibles
 
-- **deploy-nginx.sh** : Déploiement complet nginx avec backup automatique
+- **deploy-nginx.sh** : Déploiement nginx avec backup automatique
 - **update-submodules.sh** : Mise à jour intelligente des submodules
-- **n8n-workflows-backup.sh** : Backup sécurisé des workflows N8N vers GitHub
-- **update-n8n.sh** : Mise à jour de N8N avec backup automatique
+- **backup-docker-volumes.sh** : Backup générique de volumes Docker
+- **restore-docker-volume.sh** : Restauration de volumes Docker
 
 ## 📚 Documentation
 

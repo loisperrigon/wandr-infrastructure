@@ -4,12 +4,12 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Project Overview
 
-This is the **LaRefonte Infrastructure Template** - a ready-to-deploy professional infrastructure template for client projects using nginx, Docker, and modular architecture. This template provides:
+This is the **Infrastructure Template** - a minimal, ready-to-deploy professional infrastructure template for client projects using nginx, Docker, and modular architecture. This template provides:
 
-- **N8N Automation Platform**: Workflow automation for any client domain
+- **Clean Base**: No pre-configured services, add only what you need
 - **Nginx Reverse Proxy**: SSL termination and security headers
-- **Docker Services**: Modular architecture for client-specific services
-- **Template Structure**: Ready for customization per client needs
+- **Docker Compose**: Empty template ready for your services
+- **Examples Included**: Full examples in `examples/` directory
 
 ## Architecture
 
@@ -21,14 +21,18 @@ Template infrastructure for client deployment with modular services:
 │       ├── backend/                    # Backend API + Database
 │       ├── frontend/                   # Frontend application
 │       └── docs/                       # Project documentation
-├── nginx/                             # Nginx reverse proxy configuration
-│   ├── sites-available/              # Service-specific configurations
-│   ├── ssl/                          # SSL configuration template
+├── nginx/                             # Nginx configuration
+│   ├── sites-available/              # Your configurations (empty)
+│   ├── ssl/                          # SSL configuration
 │   └── conf.d/                       # Security headers, rate limiting
-├── scripts/                          # Deployment automation scripts
-│   ├── deploy-nginx.sh              # Automated deployment with backup
-│   ├── n8n-workflows-backup.sh      # N8N backup to GitHub
-│   └── backup-nginx.sh              # Manual nginx backup
+├── scripts/                          # Utility scripts
+│   ├── deploy-nginx.sh              # Nginx deployment
+│   ├── update-submodules.sh         # Submodule management
+│   ├── backup-docker-volumes.sh     # Volume backup
+│   └── restore-docker-volume.sh     # Volume restore
+├── examples/                         # Configuration examples
+│   ├── docker-compose.examples.yml  # Service examples
+│   └── nginx-templates/             # Nginx templates
 ├── docker-compose.yml               # Service orchestration template
 ├── .env.example                     # Environment variables template
 └── CLAUDE.md                        # Development guide
@@ -44,10 +48,12 @@ cp .env.example .env
 # 2. Configure client-specific variables
 nano .env  # Edit with client domain, passwords, API keys
 
-# 3. Start base infrastructure (N8N only initially)
-docker compose up -d n8n
+# 3. Copy needed services from examples
+# See examples/docker-compose.examples.yml
 
-# 4. Add client services to docker-compose.yml as needed
+# 4. Add client services as submodules
+git submodule add https://github.com/client/project.git services/client-project
+
 # 5. Deploy nginx configuration
 ./scripts/deploy-nginx.sh
 ```
