@@ -112,23 +112,33 @@ build_frontend_if_needed() {
     local frontend_dir="$1"
     local frontend_name="$2"
     
-    # V�rifier s'il y a un package.json (projet Node.js)
-    if [ -f "$frontend_dir/package.json" ]; then
-        # V�rifier s'il y a un script build
-        if grep -q '"build"' "$frontend_dir/package.json"; then
-            log_info "Script build d�tect� pour $frontend_name"
-            
-            # V�rifier si build/ ou dist/ existe d�j�
-            if [ ! -d "$frontend_dir/build" ] && [ ! -d "$frontend_dir/dist" ]; then
-                log_warning "Aucun dossier build/dist trouv� pour $frontend_name"
-                log_info "Vous devez ex�cuter 'npm run build' manuellement avant le d�ploiement"
-                log_info "Ou utilisez: cd $frontend_dir && npm run build"
-                return 1
-            else
-                log_success "Dossier build existant trouv� pour $frontend_name"
-            fi
+    # Si pas de package.json, c'est un frontend statique
+    if [ ! -f "$frontend_dir/package.json" ]; then
+        log_info "Frontend statique détecté (pas de package.json): $frontend_name"
+        return 0
+    fi
+    
+    # Si il y a index.html à la racine, considérer comme statique
+    if [ -f "$frontend_dir/index.html" ]; then
+        log_info "Frontend statique détecté (index.html présent): $frontend_name"
+        return 0
+    fi
+    
+    # Sinon, vérifier les projets avec build
+    if grep -q '"build"' "$frontend_dir/package.json"; then
+        log_info "Script build détecté pour $frontend_name"
+        
+        # Vérifier si build/ ou dist/ existe déjà
+        if [ ! -d "$frontend_dir/build" ] && [ ! -d "$frontend_dir/dist" ]; then
+            log_warning "Aucun dossier build/dist trouvé pour $frontend_name"
+            log_info "Vous devez exécuter 'npm run build' manuellement avant le déploiement"
+            log_info "Ou utilisez: cd $frontend_dir && npm run build"
+            return 1
+        else
+            log_success "Dossier build existant trouvé pour $frontend_name"
         fi
     fi
+    
     return 0
 }
 
