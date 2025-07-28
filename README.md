@@ -130,15 +130,20 @@ git commit -m "Update client backend"
 ### Déploiement Frontend Statique (optionnel)
 
 ```bash
-# Méthode rapide (recommandée pour les flemmards 😄)
+# Mode AUTO - déploie TOUS les frontends trouvés (pour les flemmards 😄)
+./scripts/update-frontend.sh --auto
+# → Cherche dans services/*/frontend/ et services/*/backend/frontend/
+# → Déploie tout automatiquement
+
+# Mode MANUEL - déploie un frontend spécifique
 ./scripts/update-frontend.sh /chemin/source nom-site
 
-# Ou via deploy-nginx.sh
+# Ou via deploy-nginx.sh (plus basique)
 ./scripts/deploy-nginx.sh frontend /chemin/source nom-site
 
 # Exemples :
-./scripts/update-frontend.sh ./services/landing/public landing
-./scripts/update-frontend.sh ~/mon-site client-vitrine
+./scripts/update-frontend.sh --auto                    # Déploie TOUT
+./scripts/update-frontend.sh ./services/landing landing  # Un seul
 ```
 
 ## 📊 Monitoring

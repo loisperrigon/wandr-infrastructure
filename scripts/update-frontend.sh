@@ -3,26 +3,41 @@
 # ===========================================
 # Script de mise à jour rapide de frontend
 # ===========================================
-# Usage: ./update-frontend.sh <chemin_source> <nom_projet>
-# Exemple: ./update-frontend.sh /path/to/frontend landing-page
+# Usage: 
+#   ./update-frontend.sh <chemin_source> <nom_projet>
+#   ./update-frontend.sh --auto
+# Exemple: 
+#   ./update-frontend.sh /path/to/frontend landing-page
+#   ./update-frontend.sh --auto
 
 set -e  # Arrêter le script en cas d'erreur
 
-# Vérifier qu'on a les 2 paramètres
-if [ $# -ne 2 ]; then
-    echo "Usage: $0 <chemin_source> <nom_projet>"
-    echo "Exemple: $0 ./services/client/frontend client-site"
+# Variables globales
+INFRASTRUCTURE_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
+AUTO_MODE=false
+
+# Vérifier le mode
+if [ "$1" = "--auto" ]; then
+    AUTO_MODE=true
+elif [ $# -ne 2 ]; then
+    echo "Usage:"
+    echo "  $0 <chemin_source> <nom_projet>    # Mode manuel"
+    echo "  $0 --auto                           # Mode automatique"
     echo ""
-    echo "Le frontend sera déployé dans /var/www/<nom_projet>"
+    echo "Mode manuel : déploie un frontend spécifique"
+    echo "Mode auto   : cherche et déploie tous les frontends dans services/*/frontend/"
+    echo ""
+    echo "Exemples:"
+    echo "  $0 ./services/client/frontend client-site"
+    echo "  $0 --auto"
     exit 1
 fi
 
-# Récupérer les paramètres
-SOURCE_DIR="$1"
-PROJECT_NAME="$2"
-
-# Configuration
-DESTINATION_DIR="/var/www/$PROJECT_NAME"
+# Mode manuel - récupérer les paramètres
+if [ "$AUTO_MODE" = false ]; then
+    SOURCE_DIR="$1"
+    PROJECT_NAME="$2"
+fi
 
 # Couleurs pour les messages
 RED='\033[0;31m'
@@ -48,67 +63,133 @@ log_error() {
     echo -e "${RED}[ERROR]${NC} $1"
 }
 
-# Vérifier si le dossier source existe
-if [ ! -d "$SOURCE_DIR" ]; then
-    log_error "Le dossier source $SOURCE_DIR n'existe pas !"
-    exit 1
-fi
-
-echo "=========================================="
-echo "  Mise à jour Frontend"
-echo "  $(date)"
-echo "=========================================="
-
-log_info "Source: $SOURCE_DIR"
-log_info "Destination: $DESTINATION_DIR"
-
-# Créer /var/www si n'existe pas
-if [ ! -d "/var/www" ]; then
-    log_info "Création de /var/www"
-    mkdir -p /var/www
-fi
-
-# Backup si le dossier existe déjà
-if [ -d "$DESTINATION_DIR" ]; then
-    BACKUP_DIR="/var/www/.backups/$(date +%Y%m%d_%H%M%S)_$PROJECT_NAME"
-    log_warning "Sauvegarde de l'ancien frontend vers $BACKUP_DIR"
-    mkdir -p /var/www/.backups
-    mv "$DESTINATION_DIR" "$BACKUP_DIR"
-    log_success "Backup créé"
-fi
-
-# Copie du nouveau dossier
-log_info "Copie des fichiers..."
-cp -r "$SOURCE_DIR" "$DESTINATION_DIR"
-
-# Permissions pour nginx
-log_info "Application des permissions nginx..."
-chown -R www-data:www-data "$DESTINATION_DIR"
-chmod -R 755 "$DESTINATION_DIR"
-
-# Vérification
-if [ -d "$DESTINATION_DIR" ]; then
-    # Compter les fichiers
-    FILE_COUNT=$(find "$DESTINATION_DIR" -type f | wc -l)
-    DIR_SIZE=$(du -sh "$DESTINATION_DIR" | cut -f1)
+# Fonction pour déployer un frontend
+deploy_frontend() {
+    local source_dir="$1"
+    local project_name="$2"
+    local destination_dir="/var/www/$project_name"
     
-    log_success "✅ Frontend déployé avec succès !"
-    log_info "📁 Fichiers: $FILE_COUNT"
-    log_info "💾 Taille: $DIR_SIZE"
-    log_info "📍 Chemin: $DESTINATION_DIR"
-    
-    # Si index.html existe, afficher
-    if [ -f "$DESTINATION_DIR/index.html" ]; then
-        log_success "✓ index.html trouvé"
+    # Vérifier si le dossier source existe
+    if [ ! -d "$source_dir" ]; then
+        log_error "Le dossier source $source_dir n'existe pas !"
+        return 1
     fi
-else
-    log_error "Erreur lors de la copie du dossier"
-    exit 1
-fi
+    
+    log_info "📦 Déploiement: $project_name"
+    log_info "Source: $source_dir"
+    log_info "Destination: $destination_dir"
+    
+    # Créer /var/www si n'existe pas
+    if [ ! -d "/var/www" ]; then
+        mkdir -p /var/www
+    fi
+    
+    # Backup si le dossier existe déjà
+    if [ -d "$destination_dir" ]; then
+        BACKUP_DIR="/var/www/.backups/$(date +%Y%m%d_%H%M%S)_$project_name"
+        log_warning "Sauvegarde de l'ancien frontend vers $BACKUP_DIR"
+        mkdir -p /var/www/.backups
+        mv "$destination_dir" "$BACKUP_DIR"
+    fi
+    
+    # Copie du nouveau dossier
+    log_info "Copie des fichiers..."
+    cp -r "$source_dir" "$destination_dir"
+    
+    # Permissions pour nginx
+    chown -R www-data:www-data "$destination_dir"
+    chmod -R 755 "$destination_dir"
+    
+    # Vérification
+    if [ -d "$destination_dir" ]; then
+        # Compter les fichiers
+        FILE_COUNT=$(find "$destination_dir" -type f | wc -l)
+        DIR_SIZE=$(du -sh "$destination_dir" | cut -f1)
+        
+        log_success "✅ $project_name déployé !"
+        log_info "   📁 Fichiers: $FILE_COUNT"
+        log_info "   💾 Taille: $DIR_SIZE"
+        
+        # Si index.html existe, afficher
+        if [ -f "$destination_dir/index.html" ]; then
+            log_success "   ✓ index.html trouvé"
+        fi
+        return 0
+    else
+        log_error "Erreur lors de la copie de $project_name"
+        return 1
+    fi
+}
 
-echo ""
-log_success "=== Mise à jour terminée ===" 
-echo ""
-echo "👉 N'oubliez pas de configurer nginx si nécessaire :"
-echo "   - Créer/modifier la config dans nginx/sites-available/"
-echo "   - Exécuter: ./scripts/deploy-nginx.sh"
+# Mode automatique
+if [ "$AUTO_MODE" = true ]; then
+    echo "=========================================="
+    echo "  Mise à jour Frontend - Mode AUTO"
+    echo "  $(date)"
+    echo "=========================================="
+    
+    log_info "🔍 Recherche des frontends dans services/*/frontend/..."
+    
+    # Vérifier que le dossier services existe
+    if [ ! -d "$INFRASTRUCTURE_DIR/services" ]; then
+        log_warning "Aucun dossier services/ trouvé"
+        exit 0
+    fi
+    
+    # Compteur
+    found=0
+    deployed=0
+    
+    # Parcourir tous les projets
+    for project_dir in "$INFRASTRUCTURE_DIR/services"/*; do
+        if [ -d "$project_dir" ]; then
+            project_name=$(basename "$project_dir")
+            
+            # Chercher frontend dans les emplacements standards
+            frontend_locations=("$project_dir/frontend" "$project_dir/backend/frontend")
+            
+            for frontend_dir in "${frontend_locations[@]}"; do
+                if [ -d "$frontend_dir" ]; then
+                    found=$((found + 1))
+                    echo ""
+                    log_info "🎯 Trouvé: $project_name → $frontend_dir"
+                    
+                    if deploy_frontend "$frontend_dir" "$project_name"; then
+                        deployed=$((deployed + 1))
+                    fi
+                    break  # Un seul frontend par projet
+                fi
+            done
+        fi
+    done
+    
+    echo ""
+    echo "=========================================="
+    log_success "Résumé: $deployed/$found frontends déployés"
+    echo "=========================================="
+    
+    if [ $deployed -gt 0 ]; then
+        echo ""
+        echo "👉 N'oubliez pas de configurer nginx si nécessaire :"
+        echo "   - Créer/modifier les configs dans nginx/sites-available/"
+        echo "   - Exécuter: ./scripts/deploy-nginx.sh"
+    fi
+    
+# Mode manuel
+else
+    echo "=========================================="
+    echo "  Mise à jour Frontend - Mode MANUEL"
+    echo "  $(date)"
+    echo "=========================================="
+    
+    if deploy_frontend "$SOURCE_DIR" "$PROJECT_NAME"; then
+        echo ""
+        log_success "=== Mise à jour terminée ===" 
+        echo ""
+        echo "👉 N'oubliez pas de configurer nginx si nécessaire :"
+        echo "   - Créer/modifier la config dans nginx/sites-available/"
+        echo "   - Exécuter: ./scripts/deploy-nginx.sh"
+    else
+        exit 1
+    fi
+fi

@@ -22,22 +22,31 @@ Déploiement automatisé de la configuration nginx avec backup.
 ```
 
 ### `update-frontend.sh` 🆕
-Mise à jour rapide d'un frontend (pour les flemmards 😄).
+Mise à jour rapide de frontends (pour les flemmards 😄).
 
 ```bash
-# Usage simple
+# Mode AUTO - déploie TOUS les frontends trouvés
+./scripts/update-frontend.sh --auto
+
+# Mode MANUEL - déploie un frontend spécifique
 ./scripts/update-frontend.sh /chemin/source nom-projet
 
 # Exemples
-./scripts/update-frontend.sh ./services/landing/public landing
-./scripts/update-frontend.sh ~/client-site/dist client-website
+./scripts/update-frontend.sh --auto                        # Trouve et déploie tout !
+./scripts/update-frontend.sh ./services/landing landing    # Un seul projet
+./scripts/update-frontend.sh ~/client-site/dist client-web # Depuis n'importe où
 ```
 
+**Mode AUTO** cherche dans :
+- `services/*/frontend/`
+- `services/*/backend/frontend/`
+
 Avantages :
+- ✅ Mode AUTO pour déployer tous les frontends d'un coup
 - ✅ Backup automatique de l'ancien frontend
 - ✅ Permissions nginx appliquées automatiquement
 - ✅ Affiche les stats (nombre de fichiers, taille)
-- ✅ Plus simple que deploy-nginx.sh
+- ✅ Parfait pour les flemmards !
 
 ### `backup-docker-volumes.sh`
 Sauvegarde de volumes Docker.
