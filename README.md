@@ -127,24 +127,31 @@ git add services/client-backend
 git commit -m "Update client backend"
 ```
 
-### Déploiement Frontend Statique (optionnel)
+### Déploiement Frontend (optionnel)
 
 ```bash
 # Mode AUTO - déploie TOUS les frontends trouvés (pour les flemmards 😄)
 ./scripts/update-frontend.sh --auto
 # → Cherche dans services/*/frontend/ et services/*/backend/frontend/
+# → Détecte automatiquement React/Vue (dist/, build/) vs HTML statique
 # → Déploie tout automatiquement
 
 # Mode MANUEL - déploie un frontend spécifique
 ./scripts/update-frontend.sh /chemin/source nom-site
 
-# Ou via deploy-nginx.sh (plus basique)
+# Ou via deploy-nginx.sh (plus basique, sans détection)
 ./scripts/deploy-nginx.sh frontend /chemin/source nom-site
 
 # Exemples :
-./scripts/update-frontend.sh --auto                    # Déploie TOUT
-./scripts/update-frontend.sh ./services/landing landing  # Un seul
+./scripts/update-frontend.sh --auto                      # Déploie TOUT avec détection
+./scripts/update-frontend.sh ./services/landing landing  # Un seul projet
+./scripts/update-frontend.sh ./services/app/frontend app # React/Vue auto-détecté
 ```
+
+**Détection intelligente** :
+- Si `dist/` ou `build/` existe → déploie le contenu compilé (React/Vue)
+- Sinon → déploie les fichiers statiques (HTML/CSS/JS)
+- Si `package.json` sans build → erreur avec instruction de faire `npm run build`
 
 ## 📊 Monitoring
 

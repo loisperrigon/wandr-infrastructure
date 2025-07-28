@@ -92,9 +92,31 @@ deploy_frontend() {
         mv "$destination_dir" "$BACKUP_DIR"
     fi
     
+    # Détection intelligente du type de frontend
+    local actual_source=""
+    
+    # Si dist/ existe (React/Vue build)
+    if [ -d "$source_dir/dist" ]; then
+        log_info "📦 Frontend React/Vue détecté (dossier dist/)"
+        actual_source="$source_dir/dist"
+    # Si build/ existe (Create React App)
+    elif [ -d "$source_dir/build" ]; then
+        log_info "📦 Frontend Create React App détecté (dossier build/)"
+        actual_source="$source_dir/build"
+    # Si package.json existe mais pas de build
+    elif [ -f "$source_dir/package.json" ] && [ ! -f "$source_dir/index.html" ]; then
+        log_warning "⚠️ package.json trouvé mais pas de dossier build/dist"
+        log_warning "Exécutez 'npm run build' avant le déploiement"
+        return 1
+    # Sinon c'est du statique
+    else
+        log_info "📄 Frontend statique détecté (HTML/CSS/JS)"
+        actual_source="$source_dir"
+    fi
+    
     # Copie du nouveau dossier
-    log_info "Copie des fichiers..."
-    cp -r "$source_dir" "$destination_dir"
+    log_info "Copie des fichiers depuis $actual_source..."
+    cp -r "$actual_source"/* "$destination_dir/" 2>/dev/null || cp -r "$actual_source"/. "$destination_dir/"
     
     # Permissions pour nginx
     chown -R www-data:www-data "$destination_dir"

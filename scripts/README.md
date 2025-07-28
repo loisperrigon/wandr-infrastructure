@@ -22,7 +22,7 @@ Déploiement automatisé de la configuration nginx avec backup.
 ```
 
 ### `update-frontend.sh` 🆕
-Mise à jour rapide de frontends (pour les flemmards 😄).
+Mise à jour rapide de frontends avec détection intelligente (pour les flemmards 😄).
 
 ```bash
 # Mode AUTO - déploie TOUS les frontends trouvés
@@ -41,7 +41,13 @@ Mise à jour rapide de frontends (pour les flemmards 😄).
 - `services/*/frontend/`
 - `services/*/backend/frontend/`
 
+**Détection intelligente** :
+- 📦 **React/Vue** : Si `dist/` ou `build/` existe → déploie le contenu du build
+- 📄 **Statique** : Si pas de build → déploie directement (HTML/CSS/JS)
+- ⚠️ **Alerte** : Si `package.json` existe mais pas de build → demande de faire `npm run build`
+
 Avantages :
+- ✅ Détection automatique React/Vue vs HTML statique
 - ✅ Mode AUTO pour déployer tous les frontends d'un coup
 - ✅ Backup automatique de l'ancien frontend
 - ✅ Permissions nginx appliquées automatiquement
