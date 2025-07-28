@@ -1,6 +1,20 @@
-# Infrastructure Template
+# 🚀 Infrastructure Template
 
-Template d'infrastructure professionnelle pour déploiement client avec nginx, Docker et architecture modulaire.
+<p align="center">
+  <strong>Template d'infrastructure professionnelle prêt à déployer</strong><br>
+  Nginx • Docker • Architecture Modulaire • SSL Auto • Multi-Services
+</p>
+
+<p align="center">
+  <a href="#-démarrage-rapide">Démarrage Rapide</a> •
+  <a href="#-architecture-template">Architecture</a> •
+  <a href="#-documentation">Documentation</a> •
+  <a href="#-contribution">Contribution</a>
+</p>
+
+---
+
+> 🎯 **Objectif** : Fournir une infrastructure de base solide et modulaire pour déployer rapidement des projets clients avec les meilleures pratiques DevOps.
 
 ## 🚀 Template Features
 
@@ -236,6 +250,29 @@ Ce template est conçu pour être **réutilisable** pour chaque client :
 - **Configuration par environnement** : Tout dans `.env`
 - **Scripts automatisés** : Déploiement simplifié
 
+## 📚 Documentation
+
+- **[CLAUDE.md](CLAUDE.md)** : Guide complet pour Claude AI et développement
+- **[CONTRIBUTING.md](CONTRIBUTING.md)** : Guide de contribution
+- **[LICENSE](LICENSE)** : Licence MIT
+
+## 🤝 Contribution
+
+Les contributions sont les bienvenues ! Voir [CONTRIBUTING.md](CONTRIBUTING.md) pour les guidelines.
+
+## 📄 Licence
+
+Ce projet est sous licence MIT - voir le fichier [LICENSE](LICENSE) pour plus de détails.
+
+## 🌟 Remerciements
+
+- Conçu pour être modulaire et réutilisable
+- Basé sur les meilleures pratiques DevOps
+- Optimisé pour une mise en production rapide
+
 ---
 
-**Infrastructure Template** - Prêt pour déploiement client professionnel 🚀
+<p align="center">
+  Made with ❤️ by <a href="https://github.com/La-Refonte">La Refonte</a><br>
+  <strong>Infrastructure Template</strong> - Votre base solide pour des déploiements professionnels 🚀
+</p>

@@ -1,0 +1,29 @@
+# Auto detect text files and perform LF normalization
+* text=auto
+
+# Scripts
+*.sh text eol=lf
+*.bash text eol=lf
+
+# Docker
+Dockerfile text eol=lf
+docker-compose*.yml text eol=lf
+
+# Documentation
+*.md text
+*.MD text
+LICENSE text
+CONTRIBUTING text
+
+# Config files
+*.json text
+*.yml text
+*.yaml text
+*.conf text
+*.config text
+.env* text
+
+# Git files
+.gitignore text
+.gitmodules text
+.gitattributes text
