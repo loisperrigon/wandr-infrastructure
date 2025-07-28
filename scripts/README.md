@@ -21,6 +21,24 @@ Déploiement automatisé de la configuration nginx avec backup.
 ./scripts/deploy-nginx.sh rollback /path/to/backup
 ```
 
+### `update-frontend.sh` 🆕
+Mise à jour rapide d'un frontend (pour les flemmards 😄).
+
+```bash
+# Usage simple
+./scripts/update-frontend.sh /chemin/source nom-projet
+
+# Exemples
+./scripts/update-frontend.sh ./services/landing/public landing
+./scripts/update-frontend.sh ~/client-site/dist client-website
+```
+
+Avantages :
+- ✅ Backup automatique de l'ancien frontend
+- ✅ Permissions nginx appliquées automatiquement
+- ✅ Affiche les stats (nombre de fichiers, taille)
+- ✅ Plus simple que deploy-nginx.sh
+
 ### `backup-docker-volumes.sh`
 Sauvegarde de volumes Docker.
 

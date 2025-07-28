@@ -130,11 +130,15 @@ git commit -m "Update client backend"
 ### Déploiement Frontend Statique (optionnel)
 
 ```bash
-# Pour déployer un site statique simple (HTML/CSS/JS)
+# Méthode rapide (recommandée pour les flemmards 😄)
+./scripts/update-frontend.sh /chemin/source nom-site
+
+# Ou via deploy-nginx.sh
 ./scripts/deploy-nginx.sh frontend /chemin/source nom-site
 
-# Exemple : déployer une landing page
-./scripts/deploy-nginx.sh frontend ./services/landing/public landing
+# Exemples :
+./scripts/update-frontend.sh ./services/landing/public landing
+./scripts/update-frontend.sh ~/mon-site client-vitrine
 ```
 
 ## 📊 Monitoring
@@ -180,6 +184,7 @@ sudo certbot renew
 ## 🛠️ Scripts Disponibles
 
 - **deploy-nginx.sh** : Déploiement nginx avec backup automatique
+- **update-frontend.sh** : Mise à jour rapide d'un frontend statique
 - **backup-docker-volumes.sh** : Backup générique de volumes Docker
 - **restore-docker-volume.sh** : Restauration de volumes Docker
 
