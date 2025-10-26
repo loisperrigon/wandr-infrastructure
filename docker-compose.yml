@@ -1,20 +1,122 @@
 # ===========================================
-# Docker Compose - Infrastructure Template
+# Docker Compose - Wandr Infrastructure
 # ===========================================
-# 1. Copiez ce template pour votre client
-# 2. Ajoutez vos services selon les besoins
-# 3. Configurez les variables dans .env
 
 version: '3.8'
 
 services:
   # ========================================
-  # Ajoutez vos services ici
+  # PostgreSQL Database with pgvector
   # ========================================
-  
-  # Voir examples/docker-compose.examples.yml pour des exemples
+  wandr-db:
+    image: ankane/pgvector:latest
+    container_name: wandr-db
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: ${POSTGRES_DB:-wandr}
+      POSTGRES_USER: ${POSTGRES_USER:-wandr}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-wandr_password}
+    volumes:
+      - wandr-db-data:/var/lib/postgresql/data
+    networks:
+      - wandr-network
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-wandr}"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  # ========================================
+  # Backend API (Hono.js)
+  # ========================================
+  wandr-backend:
+    build:
+      context: ./services/wandr
+      dockerfile: apps/backend/Dockerfile
+    container_name: wandr-backend
+    restart: unless-stopped
+    environment:
+      NODE_ENV: production
+      DATABASE_URL: postgresql://${POSTGRES_USER:-wandr}:${POSTGRES_PASSWORD:-wandr_password}@wandr-db:5432/${POSTGRES_DB:-wandr}?schema=public
+      OPENAI_API_KEY: ${OPENAI_API_KEY}
+      TOGETHER_API_KEY: ${TOGETHER_API_KEY}
+      REDDIT_CLIENT_ID: ${REDDIT_CLIENT_ID}
+      REDDIT_CLIENT_SECRET: ${REDDIT_CLIENT_SECRET}
+      REDDIT_USERNAME: ${REDDIT_USERNAME}
+      REDDIT_PASSWORD: ${REDDIT_PASSWORD}
+      GOOGLE_MAPS_API_KEY: ${GOOGLE_MAPS_API_KEY}
+    depends_on:
+      wandr-db:
+        condition: service_healthy
+    networks:
+      - wandr-network
+    expose:
+      - "8000"
+    healthcheck:
+      test: ["CMD", "wget", "--no-verbose", "--tries=1", "--spider", "http://localhost:8000/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+
+  # ========================================
+  # Frontend Web (Next.js)
+  # ========================================
+  wandr-web:
+    build:
+      context: ./services/wandr
+      dockerfile: apps/web/Dockerfile
+    container_name: wandr-web
+    restart: unless-stopped
+    environment:
+      NODE_ENV: production
+      NEXT_PUBLIC_API_URL: ${NEXT_PUBLIC_API_URL:-http://localhost/api}
+      NEXT_PUBLIC_MAPBOX_TOKEN: ${NEXT_PUBLIC_MAPBOX_TOKEN}
+      NEXT_PUBLIC_ADSENSE_ID: ${NEXT_PUBLIC_ADSENSE_ID}
+    depends_on:
+      - wandr-backend
+    networks:
+      - wandr-network
+    expose:
+      - "3000"
+    healthcheck:
+      test: ["CMD", "wget", "--no-verbose", "--tries=1", "--spider", "http://localhost:3000"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+
+  # ========================================
+  # Nginx Reverse Proxy
+  # ========================================
+  nginx:
+    image: nginx:alpine
+    container_name: wandr-nginx
+    restart: unless-stopped
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - ./nginx/nginx.conf:/etc/nginx/nginx.conf:ro
+      - ./nginx/conf.d:/etc/nginx/conf.d:ro
+      - ./nginx/ssl:/etc/nginx/ssl:ro
+      - ./nginx/logs:/var/log/nginx
+    depends_on:
+      - wandr-web
+      - wandr-backend
+    networks:
+      - wandr-network
+    healthcheck:
+      test: ["CMD", "wget", "--no-verbose", "--tries=1", "--spider", "http://localhost/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+
+networks:
+  wandr-network:
+    driver: bridge
 
 volumes:
   # ========================================
-  # Définissez vos volumes ici
+  # Persistent Data Volumes
   # ========================================
+  wandr-db-data:
+    driver: local

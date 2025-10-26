@@ -1,0 +1,3 @@
+[submodule "services/wandr"]
+	path = services/wandr
+	url = https://github.com/loisperrigon/Wandr.git
