@@ -12,6 +12,8 @@ services:
     image: ankane/pgvector:latest
     container_name: wandr-db
     restart: unless-stopped
+    ports:
+      - "5432:5432"  # Expose PostgreSQL port for remote access
     environment:
       POSTGRES_DB: ${POSTGRES_DB:-wandr}
       POSTGRES_USER: ${POSTGRES_USER:-wandr}
