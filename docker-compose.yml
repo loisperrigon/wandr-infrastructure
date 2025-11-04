@@ -47,7 +47,7 @@ services:
       REDDIT_USERNAME: ${REDDIT_USERNAME}
       REDDIT_PASSWORD: ${REDDIT_PASSWORD}
       GOOGLE_MAPS_API_KEY: ${GOOGLE_MAPS_API_KEY}
-      NEXT_PUBLIC_API_URL: ${NEXT_PUBLIC_API_URL:-https://wandr.online/api}
+      NEXT_PUBLIC_API_URL: ${NEXT_PUBLIC_API_URL:-https://api.wandr.online}
     depends_on:
       wandr-db:
         condition: service_healthy
@@ -69,7 +69,7 @@ services:
       context: ./services/wandr
       dockerfile: apps/web/Dockerfile
       args:
-        NEXT_PUBLIC_API_URL: ${NEXT_PUBLIC_API_URL:-https://wandr.online/api}
+        NEXT_PUBLIC_API_URL: ${NEXT_PUBLIC_API_URL:-https://api.wandr.online}
         NEXT_PUBLIC_MAPBOX_TOKEN: ${NEXT_PUBLIC_MAPBOX_TOKEN:-}
         NEXT_PUBLIC_ADSENSE_ID: ${NEXT_PUBLIC_ADSENSE_ID:-}
     container_name: wandr-web
