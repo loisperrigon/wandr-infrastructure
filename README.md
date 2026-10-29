@@ -44,7 +44,7 @@ infrastructure-template/
 │   └── nginx-templates/             # Templates nginx
 ├── docker-compose.yml               # Template d'orchestration
 ├── .env.example                     # Variables d'environnement
-├── CLAUDE.md                        # Guide développeur
+├── AGENTS.md                        # Guide développeur (agents et humains)
 └── README.md                        # Ce fichier
 ```
 
@@ -216,7 +216,7 @@ sudo certbot renew
 
 ## 📚 Documentation
 
-- **[CLAUDE.md](CLAUDE.md)** : Guide complet pour le développement
+- **[AGENTS.md](AGENTS.md)** : Guide complet pour le développement
 - **[.env.example](.env.example)** : Template des variables d'environnement
 
 ## 🆘 Dépannage
@@ -252,7 +252,7 @@ Ce template est conçu pour être **réutilisable** pour chaque client :
 
 ## 📚 Documentation
 
-- **[CLAUDE.md](CLAUDE.md)** : Guide complet pour Claude AI et développement
+- **[AGENTS.md](AGENTS.md)** : Guide complet pour les agents de code et le développement
 - **[CONTRIBUTING.md](CONTRIBUTING.md)** : Guide de contribution
 - **[LICENSE](LICENSE)** : Licence MIT
 
